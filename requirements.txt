@@ -3,6 +3,11 @@
 # Manutenção Preditiva - NASA CMAPSS + AI4I
 # ============================================
 
+# Setup wheels
+setuptools>=68.0.0
+wheel
+build
+
 # FastAPI e servidor
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
