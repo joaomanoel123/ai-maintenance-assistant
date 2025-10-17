@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 Manutenção Preditiva - NASA CMAPSS + AI4I</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #e8f5e9;
+            border-radius: 25px;
+            font-size: 14px;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+
+        .status.offline {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        .status.offline .status-dot {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            background: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 1024px) {
+            .tab-content.active {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: monospace;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .result-value {
+            font-weight: 700;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .alert-critical {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            color: #ef6c00;
+            border-left: 4px solid #ef6c00;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .chatbot {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            animation: slideIn 0.3s;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .message.bot .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.user .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+        }
+
+        .examples {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .examples h4 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .examples code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏭 Manutenção Preditiva Industrial</h1>
+            <p class="subtitle">NASA CMAPSS (RUL) + AI4I (Failure Detection)</p>
+            <div id="apiStatus" class="status">
+                <span class="status-dot"></span>
+                <span>Verificando API...</span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('rul')">
+                🔧 Predição de RUL (NASA CMAPSS)
+            </button>
+            <button class="tab" onclick="switchTab('failure')">
+                ⚠️ Predição de Falha (AI4I)
+            </button>
+            <button class="tab" onclick="switchTab('chat')">
+                💬 Chatbot Assistente
+            </button>
+        </div>
+
+        <!-- TAB: RUL Prediction -->
+        <div id="rul-tab" class="tab-content active">
+            <div class="card">
+                <h2>🔧 Predição de Vida Útil (RUL)</h2>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Insira os dados dos sensores do motor turbofan para prever a vida útil restante.
+                </p>
+
+                <form id="rulForm">
+                    <div class="form-group">
+                        <label>Dados dos Sensores (separados por vírgula)</label>
+                        <textarea id="sensorData" placeholder="Ex: 518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, ..."></textarea>
+                        <small style="color: #666;">Mínimo 20 valores de sensores</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ID da Unidade (opcional)</label>
+                        <input type="number" id="unitId" placeholder="Ex: 1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ciclo Atual (opcional)</label>
+                        <input type="number" id="cycle" placeholder="Ex: 100">
+                    </div>
+
+                    <button type="submit">🔮 Calcular RUL</button>
+                </form>
+
+                <div class="examples">
+                    <h4>📋 Exemplo de Dados:</h4>
+                    <p>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, 554.36, 2388.06, 9046.19, 1.30, 47.47, 521.66, 2388.02, 8138.62, 8.4195, 0.03, 392, 2388, 100.0, 38.86, 23.4190</p>
+                </div>
+
+                <div class="loading" id="rulLoading">
+                    <div class="spinner"></div>
+                    <p>Processando...</p>
+                </div>
+
+                <div class="result-box" id="rulResult">
+                    <div class="result-header">📊 Resultado da Análise</div>
+                    <div class="result-item">
+                        <span class="result-label">Vida Útil Restante (RUL):</span>
+                        <span class="result-value" id="rulValue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Confiança:</span>
+                        <span class="result-value" id="rulConfidence">-</span>
+                    </div>
+                    <div class="alert" id="rulAlert">
+                        <strong id="rulClassification">-</strong>
+                        <p id="rulRecommendation" style="margin-top: 8px;">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>ℹ️ Sobre NASA CMAPSS</h2>
+                <p style="line-height: 1.8; color: #666;">
+                    <strong>NASA CMAPSS</strong> (Commercial Modular Aero-Propulsion System Simulation) é um dataset de degradação de motores turbofan.
+                    <br><br>
+                    <strong>RUL (Remaining Useful Life)</strong> representa o número de ciclos operacionais restantes antes da falha do motor.
+                    <br><br>
+                    O modelo analisa <strong>21 sensores</strong> e <strong>3 configurações operacionais</strong> para prever a vida útil.
+                </p>
+            </div>
+        </div>
+
+        <!-- TAB: Failure Prediction -->
+        <div id="failure-tab" class="tab-content">
+            <div class="card">
+                <h2>⚠️ Predição de Falha de Máquina</h2>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Insira os parâmetros operacionais da máquina para detectar riscos de falha.
+                </p>
+
+                <form id="failureForm">
+                    <div class="form-group">
+                        <label>Temperatura do Ar [K]</label>
+                        <input type="number" step="0.1" id="airTemp" placeholder="Ex: 298.1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Temperatura do Processo [K]</label>
+                        <input type="number" step="0.1" id="processTemp" placeholder="Ex: 308.6" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Velocidade Rotacional [rpm]</label>
+                        <input type="number" id="rotSpeed" placeholder="Ex: 1551" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Torque [Nm]</label>
+                        <input type="number" step="0.1" id="torque" placeholder="Ex: 42.8" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Desgaste da Ferramenta [min]</label>
+                        <input type="number" id="toolWear" placeholder="Ex: 0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Produto</label>
+                        <select id="productType" required>
+                            <option value="">Selecione...</option>
+                            <option value="L">L (Low)</option>
+                            <option value="M">M (Medium)</option>
+                            <option value="H">H (High)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit">🔍 Detectar Falha</button>
+                </form>
+
+                <div class="examples">
+                    <h4>📋 Valores Típicos:</h4>
+                    <p><strong>Normal:</strong> Air Temp: 298K, Process: 308K, Speed: 1500rpm, Torque: 40Nm, Wear: 50min</p>
+                    <p><strong>Risco:</strong> Air Temp: 310K, Process: 320K, Speed: 1200rpm, Torque: 60Nm, Wear: 200min</p>
+                </div>
+
+                <div class="loading" id="failureLoading">
+                    <div class="spinner"></div>
+                    <p>Analisando...</p>
+                </div>
+
+                <div class="result-box" id="failureResult">
+                    <div class="result-header">📊 Análise de Risco</div>
+                    <div class="result-item">
+                        <span class="result-label">Probabilidade de Falha:</span>
+                        <span class="result-value" id="failureProbability">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Confiança:</span>
+                        <span class="result-value" id="failureConfidence">-</span>
+                    </div>
+                    <div class="alert" id="failureAlert">
+                        <strong id="failureClassification">-</strong>
+                        <p id="failureRecommendation" style="margin-top: 8px;">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>ℹ️ Sobre AI4I Dataset</h2>
+                <p style="line-height: 1.8; color: #666;">
+                    <strong>AI4I 2020</strong> é um dataset sintético de manutenção preditiva que reflete dados industriais reais.
+                    <br><br>
+                    O modelo detecta falhas baseado em:
+                    <br>• Temperatura (ar e processo)
+                    <br>• Velocidade rotacional
+                    <br>• Torque aplicado
+                    <br>• Desgaste da ferramenta
+                    <br><br>
+                    <strong>5 tipos de falha:</strong> TWF, HDF, PWF, OSF, RNF
+                </p>
+            </div>
+        </div>
+
+        <!-- TAB: Chatbot -->
+        <div id="chat-tab" class="tab-content">
+            <div class="card chatbot">
+                <h2>💬 Assistente de Manutenção</h2>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-content">
+                            Olá! 👋 Sou seu assistente de manutenção preditiva. Posso ajudar com análises de RUL e detecção de falhas. Como posso ajudar?
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua mensagem...">
+                    <button id="sendBtn" style="width: auto; padding: 14px 30px;">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ ALTERE PARA SUA URL DO RENDER
+        const API_URL = 'https://seu-app.onrender.com';
+        
+        let apiOnline = false;
+
+        // Verificar status da API
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    apiOnline = true;
+                    document.getElementById('apiStatus').className = 'status';
+                    document.getElementById('apiStatus').innerHTML = `
+                        <span class="status-dot"></span>
+                        <span>API Online ✓</span>
+                    `;
+                } else {
+                    throw new Error('API offline');
+                }
+            } catch (error) {
+                apiOnline = false;
+                document.getElementById('apiStatus').className = 'status offline';
+                document.getElementById('apiStatus').innerHTML = `
+                    <span class="status-dot"></span>
+                    <span>API Offline</span>
+                `;
+            }
+        }
+
+        // Alternar tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        // RUL Prediction
+        document.getElementById('rulForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!apiOnline) {
+                alert('API offline! Verifique a conexão.');
+                return;
+            }
+
+            const sensorData = document.getElementById('sensorData').value
+                .split(',')
+                .map(v => parseFloat(v.trim()))
+                .filter(v => !isNaN(v));
+
+            if (sensorData.length < 20) {
+                alert('Por favor, insira pelo menos 20 valores de sensores!');
+                return;
+            }
+
+            document.getElementById('rulLoading').classList.add('show');
+            document.getElementById('rulResult').classList.remove('show');
+
+            try {
+                const payload = {
+                    sensor_data: sensorData,
+                    unit_id: parseInt(document.getElementById('unitId').value) || null,
+                    cycle: parseInt(document.getElementById('cycle').value) || null
+                };
+
+                const response = await fetch(`${API_URL}/predict/rul`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Erro na API');
+
+                const result = await response.json();
+                
+                document.getElementById('rulValue').textContent = `${result.prediction.toFixed(2)} ciclos`;
+                document.getElementById('rulConfidence').textContent = `${(result.confidence * 100).toFixed(2)}%`;
+                document.getElementById('rulClassification').textContent = result.classification;
+                document.getElementById('rulRecommendation').textContent = result.recommendation;
+
+                const alertBox = document.getElementById('rulAlert');
+                if (result.classification.includes('CRÍTICO')) {
+                    alertBox.className = 'alert alert-critical';
+                } else if (result.classification.includes('ATENÇÃO')) {
+                    alertBox.className = 'alert alert-warning';
+                } else {
+                    alertBox.className = 'alert alert-success';
+                }
+
+                document.getElementById('rulResult').classList.add('show');
+            } catch (error) {
+                alert('Erro ao fazer predição: ' + error.message);
+            } finally {
+                document.getElementById('rulLoading').classList.remove('show');
+            }
+        });
+
+        // Failure Prediction
+        document.getElementById('failureForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!apiOnline) {
+                alert('API offline! Verifique a conexão.');
+                return;
+            }
+
+            document.getElementById('failureLoading').classList.add('show');
+            document.getElementById('failureResult').classList.remove('show');
+
+            try {
+                const payload = {
+                    air_temperature: parseFloat(document.getElementById('airTemp').value),
+                    process_temperature: parseFloat(document.getElementById('processTemp').value),
+                    rotational_speed: parseInt(document.getElementById('rotSpeed').value),
+                    torque: parseFloat(document.getElementById('torque').value),
+                    tool_wear: parseInt(document.getElementById('toolWear').value),
+                    product_type: document.getElementById('productType').value
+                };
+
+                const response = await fetch(`${API_URL}/predict/failure`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Erro na API');
+
+                const result = await response.json();
+                
+                document.getElementById('failureProbability').textContent = `${(result.confidence * 100).toFixed(2)}%`;
+                document.getElementById('failureConfidence').textContent = `${(result.confidence * 100).toFixed(2)}%`;
+                document.getElementById('failureClassification').textContent = result.classification;
+                document.getElementById('failureRecommendation').textContent = result.recommendation;
+
+                const alertBox = document.getElementById('failureAlert');
+                if (result.classification.includes('ALTO RISCO')) {
+                    alertBox.className = 'alert alert-critical';
+                } else if (result.classification.includes('MODERADO')) {
+                    alertBox.className = 'alert alert-warning';
+                } else {
+                    alertBox.className = 'alert alert-success';
+                }
+
+                document.getElementById('failureResult').classList.add('show');
+            } catch (error) {
+                alert('Erro ao fazer predição: ' + error.message);
+            } finally {
+                document.getElementById('failureLoading').classList.remove('show');
+            }
+        });
+
+        // Chatbot
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function handleChatMessage(message) {
+            addMessage(message, 'user');
+
+            const lowerMsg = message.toLowerCase();
+
+            // Detectar tipo de consulta
+            if (lowerMsg.includes('rul') || lowerMsg.includes('vida útil') || lowerMsg.includes('ciclos')) {
+                const numbers = message.match(/[\d.]+/g);
+                
+                if (numbers && numbers.length >= 20) {
+                    const sensorData = numbers.slice(0, 24).map(n => parseFloat(n));
+                    
+                    try {
+                        const response = await fetch(`${API_URL}/predict/rul`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sensor_data: sensorData })
+                        });
+
+                        const result = await response.json();
+                        
+                        addMessage(
+                            `🔧 <strong>Análise de RUL Completa!</strong><br><br>
+                            📊 <strong>Vida Útil Restante:</strong> ${result.prediction.toFixed(2)} ciclos<br>
+                            🎯 <strong>Confiança:</strong> ${(result.confidence * 100).toFixed(2)}%<br>
+                            ${result.classification}<br><br>
+                            💡 <strong>Recomendação:</strong><br>${result.recommendation}`,
+                            'bot'
+                        );
+                    } catch (error) {
+                        addMessage('Desculpe, ocorreu um erro ao processar a análise RUL. 😔', 'bot');
+                    }
+                } else {
+                    addMessage(
+                        'Para análise de RUL, preciso de pelo menos 20 valores de sensores.<br><br>' +
+                        '📋 <strong>Exemplo:</strong><br>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, ...',
+                        'bot'
+                    );
+                }
+            } 
+            else if (lowerMsg.includes('falha') || lowerMsg.includes('failure') || lowerMsg.includes('ai4i')) {
+                addMessage(
+                    '⚠️ Para análise de falha, preciso dos seguintes dados:<br><br>' +
+                    '• Temperatura do ar [K]<br>' +
+                    '• Temperatura do processo [K]<br>' +
+                    '• Velocidade rotacional [rpm]<br>' +
+                    '• Torque [Nm]<br>' +
+                    '• Desgaste da ferramenta [min]<br>' +
+                    '• Tipo de produto (L/M/H)<br><br>' +
+                    'Use a aba "Predição de Falha" para uma análise completa! 👆',
+                    'bot'
+                );
+            }
+            else if (lowerMsg.includes('ajuda') || lowerMsg.includes('help') || lowerMsg === 'oi' || lowerMsg === 'olá') {
+                addMessage(
+                    'Olá! 👋 Posso ajudar com:<br><br>' +
+                    '🔧 <strong>Análise de RUL (NASA CMAPSS)</strong><br>' +
+                    'Envie os dados dos 20+ sensores do motor turbofan<br><br>' +
+                    '⚠️ <strong>Detecção de Falhas (AI4I)</strong><br>' +
+                    'Use a aba específica para inserir parâmetros operacionais<br><br>' +
+                    '💡 <strong>Informações sobre os datasets</strong><br>' +
+                    'Pergunte sobre NASA CMAPSS ou AI4I<br><br>' +
+                    'Digite "exemplo" para ver dados de teste!',
+                    'bot'
+                );
+            }
+            else if (lowerMsg.includes('exemplo')) {
+                addMessage(
+                    '📋 <strong>Exemplo de Dados NASA CMAPSS:</strong><br><br>' +
+                    '<code>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, 554.36, 2388.06, 9046.19, 1.30, 47.47, 521.66, 2388.02, 8138.62, 8.4195, 0.03, 392, 2388, 100.0, 38.86, 23.4190</code><br><br>' +
+                    'Cole esses valores na aba "Predição de RUL" ou envie aqui para análise!',
+                    'bot'
+                );
+            }
+            else if (lowerMsg.includes('cmapss') || lowerMsg.includes('nasa')) {
+                addMessage(
+                    '🚀 <strong>NASA CMAPSS</strong><br><br>' +
+                    'Dataset de degradação de motores turbofan usado pela NASA para pesquisa em manutenção preditiva.<br><br>' +
+                    '📊 <strong>Características:</strong><br>' +
+                    '• 21 sensores diferentes<br>' +
+                    '• 3 configurações operacionais<br>' +
+                    '• Múltiplos cenários de falha<br>' +
+                    '• RUL: Remaining Useful Life (ciclos restantes)<br><br>' +
+                    'Use para prever quando um motor precisará de manutenção!',
+                    'bot'
+                );
+            }
+            else if (lowerMsg.includes('ai4i')) {
+                addMessage(
+                    '🏭 <strong>AI4I 2020 Predictive Maintenance</strong><br><br>' +
+                    'Dataset sintético que reflete condições industriais reais.<br><br>' +
+                    '📊 <strong>Características:</strong><br>' +
+                    '• Temperatura (ar e processo)<br>' +
+                    '• Velocidade rotacional<br>' +
+                    '• Torque<br>' +
+                    '• Desgaste da ferramenta<br><br>' +
+                    '⚠️ <strong>5 tipos de falha:</strong><br>' +
+                    'TWF, HDF, PWF, OSF, RNF<br><br>' +
+                    'Detecta falhas antes que aconteçam!',
+                    'bot'
+                );
+            }
+            else {
+                addMessage(
+                    'Não entendi completamente. 🤔<br><br>' +
+                    'Tente:<br>' +
+                    '• "ajuda" - ver o que posso fazer<br>' +
+                    '• "exemplo" - ver dados de teste<br>' +
+                    '• Enviar dados de sensores para análise RUL<br>' +
+                    '• Perguntar sobre NASA CMAPSS ou AI4I',
+                    'bot'
+                );
+            }
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const input = document.getElementById('chatInput');
+            if (input.value.trim()) {
+                handleChatMessage(input.value);
+                input.value = '';
+            }
+        });
+
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('sendBtn').click();
+            }
+        });
+
+        // Inicializar
+        checkAPIStatus();
+        setInterval(checkAPIStatus, 30000);
+    </script>
+</body>
+</html>
