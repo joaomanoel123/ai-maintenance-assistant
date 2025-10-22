@@ -708,6 +708,10 @@ async def get_important_memory(n: int = 5):
     important = memory.retrieve_important(n)
     return {"important_memories": important, "count": len(important)}
 
+@app.head("/")
+async def head_root():
+    return{}
+
 # ============================================
 # EXECUÇÃO LOCAL
 # ============================================
