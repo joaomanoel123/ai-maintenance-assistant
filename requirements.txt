@@ -9,32 +9,32 @@ wheel
 build
 
 # FastAPI e servidor
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-python-multipart==0.0.6
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+python-multipart>=0.0.6
 
 # Machine Learning
-numpy==1.24.3
-pandas==2.0.3
-scikit-learn==1.3.2
-joblib==1.3.2
+numpy>=1.24.3
+pandas>=2.0.3
+scikit-learn>=1.3.2
+joblib>=1.3.2
 
 # Deep Learning (para CNN-RNN)
-tensorflow-cpu==2.13.0
+tensorflow-cpu>=2.13.0
 
 
 # Autenticação
-pyjwt==2.8.0
-passlib[bvrypt]==1.7.4
+pyjwt>=2.8.0
+passlib[bvrypt]>=1.7.4
 
 
 # Processamento de dados
-scipy==1.11.3
+scipy>=1.11.3
 
 # Opcional: Visualização
-matplotlib==3.8.0
-seaborn==0.13.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
 
 # Utilidades
 python-dotenv==1.0.0
