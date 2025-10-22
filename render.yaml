@@ -1,13 +1,22 @@
 services:
- # BACKEND API
- -type: web 
-  name: ml-pipiline-backend
-  env: ptthon
-  region: oregon
-  plan: free
-  rootDir: backend #aponta para a pasta backen 
-  branch: main #Branch  do github
-  build Command: pip install -r requirements.txt
-  start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
-  envVArs: PYTHON_VERSION
-  -key: 3.11.0
+  type: web
+    name: ml-pipeline-backend
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend  # ou app (dependendo da sua estrutura)
+    branch: ./
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: 2
+      - key: CUDA_VISIBLE_DEVICES
+        value: -1
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_E5etwTVau2JK@ep-rough-forest-aeg674mp-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require # ORIGENAL
