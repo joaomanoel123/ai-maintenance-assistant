@@ -1,294 +1,146 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏭 Manutenção Preditiva - NASA CMAPSS + AI4I</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        header {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        h1 {
-            color: #1e3c72;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .subtitle {
-            color: #666;
-            font-size: 1.1em;
-            margin-bottom: 15px;
-        }
-
-        .status {
-            display: inline-flex;
+ex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: #e8f5e9;
-            border-radius: 25px;
-            font-size: 14px;
-            color: #2e7d32;
-            font-weight: 600;
-        }
-
-        .status.offline {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #4caf50;
-            animation: pulse 2s infinite;
-        }
-
-        .status.offline .status-dot {
-            background: #f44336;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .tabs {
-            display: flex;
+            justify-content: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
-        .tab {
-            flex: 1;
-            background: white;
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        #status-indicator {
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(60, 232, 160, 0.1);
+            color: var(--success);
+            text-shadow: 0 0 8px rgba(60, 232, 160, 0.4);
+            border: 1px solid var(--success);
+            font-weight: 500;
         }
 
-        .tab:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        #status-indicator.offline {
+            background: rgba(232, 84, 84, 0.1);
+            color: var(--error);
+            text-shadow: 0 0 8px rgba(232, 84, 84, 0.4);
+            border-color: var(--error);
         }
 
-        .tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
+        /* GRID DE CARDS */
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
-            animation: fadeIn 0.3s;
+            margin-bottom: 30px;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @media (max-width: 1024px) {
-            .tab-content.active {
-                grid-template-columns: 1fr;
-            }
-        }
-
+        /* CARD BASE */
         .card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: var(--bg-card);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .card:hover {
+            border-color: var(--accent-silver);
+            box-shadow: 0 8px 24px rgba(166, 166, 166, 0.1);
+            transform: translateY(-2px);
         }
 
         .card h2 {
-            color: #1e3c72;
+            color: var(--accent-silver);
+            text-shadow: 0 0 4px rgba(192, 192, 192, 0.3);
+            font-size: 1.3rem;
+            font-weight: 400;
             margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            letter-spacing: 1px;
         }
 
+        /* FORM GROUPS */
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
-        label {
+        .form-group label {
             display: block;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 14px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        input, select, textarea {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid var(--border-soft);
             border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
         }
 
-        input:focus, select:focus, textarea:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-silver);
+            box-shadow: 0 0 8px rgba(166, 166, 166, 0.2);
         }
 
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-            font-family: monospace;
-        }
-
+        /* BUTTONS */
         button {
             width: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
             padding: 14px;
+            background: var(--accent-silver);
+            color: #0A0A0A;
+            border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         button:hover {
+            background: #C0C0C0;
+            box-shadow: 0 4px 16px rgba(166, 166, 166, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
-            background: #ccc;
+            background: var(--text-secondary);
             cursor: not-allowed;
-            transform: none;
+            opacity: 0.5;
         }
 
-        .result-box {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-            display: none;
-        }
-
-        .result-box.show {
-            display: block;
-            animation: slideIn 0.3s;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .result-header {
-            font-size: 1.3em;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #1e3c72;
-        }
-
-        .result-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .result-label {
-            font-weight: 600;
-            color: #666;
-        }
-
-        .result-value {
-            font-weight: 700;
-            color: #1e3c72;
-            font-size: 1.1em;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-weight: 600;
-        }
-
-        .alert-critical {
-            background: #ffebee;
-            color: #c62828;
-            border-left: 4px solid #c62828;
-        }
-
-        .alert-warning {
-            background: #fff3e0;
-            color: #ef6c00;
-            border-left: 4px solid #ef6c00;
-        }
-
-        .alert-success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-left: 4px solid #2e7d32;
-        }
-
+        /* LOADING SPINNER */
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
         }
 
-        .loading.show {
+        .loading.active {
             display: block;
         }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid var(--border-soft);
+            border-top: 3px solid var(--accent-silver);
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto;
         }
 
         @keyframes spin {
@@ -296,576 +148,570 @@
             100% { transform: rotate(360deg); }
         }
 
-        .chatbot {
-            display: flex;
-            flex-direction: column;
-            height: 600px;
+        /* RESULT DISPLAY */
+        #result-display {
+            display: none;
         }
 
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            margin-bottom: 15px;
+        #result-display.active {
+            display: block;
         }
 
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            animation: slideIn 0.3s;
+        .result-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: rgba(26, 26, 26, 0.6);
+            border-left: 3px solid var(--accent-silver);
+            border-radius: 6px;
         }
 
-        .message.user {
-            flex-direction: row-reverse;
+        .result-section h3 {
+            color: var(--accent-silver);
+            font-size: 1rem;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .message-content {
-            max-width: 75%;
-            padding: 12px 16px;
+        .result-section p {
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+
+        .result-section strong {
+            color: var(--success);
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
             border-radius: 12px;
-            line-height: 1.5;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .message.bot .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .severity-low { background: rgba(60, 232, 160, 0.2); color: var(--success); }
+        .severity-medium { background: rgba(232, 209, 60, 0.2); color: var(--warning); }
+        .severity-high { background: rgba(232, 84, 84, 0.2); color: var(--error); }
+        .severity-critical { background: rgba(232, 84, 84, 0.4); color: var(--error); }
+
+        /* EXECUTION PLAN */
+        .execution-plan {
+            list-style: none;
+            padding: 0;
         }
 
-        .message.user .message-content {
-            background: white;
-            color: #333;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        .execution-plan li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-soft);
+            color: var(--text-secondary);
         }
 
-        .chat-input-container {
+        .execution-plan li:last-child {
+            border-bottom: none;
+        }
+
+        /* FEEDBACK SECTION */
+        .feedback-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(60, 232, 160, 0.05);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+        }
+
+        .feedback-section.active {
+            display: block;
+        }
+
+        .rating-container {
             display: flex;
             gap: 10px;
+            margin: 16px 0;
         }
 
-        .chat-input {
-            flex: 1;
+        .rating-btn {
+            width: auto;
+            padding: 10px 20px;
+            background: rgba(166, 166, 166, 0.2);
+            color: var(--text-primary);
         }
 
-        .examples {
-            background: #f5f5f5;
-            padding: 15px;
+        .rating-btn:hover {
+            background: var(--accent-silver);
+            color: #0A0A0A;
+        }
+
+        /* STATS DISPLAY */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .stat-item {
+            padding: 16px;
+            background: rgba(26, 26, 26, 0.6);
             border-radius: 8px;
-            margin-top: 15px;
-            font-size: 0.9em;
+            text-align: center;
         }
 
-        .examples h4 {
-            color: #1e3c72;
-            margin-bottom: 10px;
+        .stat-value {
+            font-size: 2rem;
+            color: var(--accent-silver);
+            font-weight: 300;
+            margin-bottom: 8px;
         }
 
-        .examples code {
-            background: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- HEADER -->
         <header>
-            <h1>🏭 Manutenção Preditiva Industrial</h1>
-            <p class="subtitle">NASA CMAPSS (RUL) + AI4I (Failure Detection)</p>
-            <div id="apiStatus" class="status">
-                <span class="status-dot"></span>
-                <span>Verificando API...</span>
+            <h1>AGI GENERATIVA v2.0</h1>
+            <p>Sistema Híbrido de Inteligência Artificial • Minimal Core Design</p>
+            
+            <div id="status-container">
+                <div id="status-indicator">🔄 Verificando API...</div>
             </div>
         </header>
 
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('rul')">
-                🔧 Predição de RUL (NASA CMAPSS)
-            </button>
-            <button class="tab" onclick="switchTab('failure')">
-                ⚠️ Predição de Falha (AI4I)
-            </button>
-            <button class="tab" onclick="switchTab('chat')">
-                💬 Chatbot Assistente
-            </button>
-        </div>
-
-        <!-- TAB: RUL Prediction -->
-        <div id="rul-tab" class="tab-content active">
+        <!-- DASHBOARD GRID -->
+        <div class="dashboard-grid">
+            <!-- CARD: CONFIGURAÇÃO DE ANÁLISE -->
             <div class="card">
-                <h2>🔧 Predição de Vida Útil (RUL)</h2>
-                <p style="color: #666; margin-bottom: 20px;">
-                    Insira os dados dos sensores do motor turbofan para prever a vida útil restante.
-                </p>
-
-                <form id="rulForm">
-                    <div class="form-group">
-                        <label>Dados dos Sensores (separados por vírgula)</label>
-                        <textarea id="sensorData" placeholder="Ex: 518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, ..."></textarea>
-                        <small style="color: #666;">Mínimo 20 valores de sensores</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>ID da Unidade (opcional)</label>
-                        <input type="number" id="unitId" placeholder="Ex: 1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Ciclo Atual (opcional)</label>
-                        <input type="number" id="cycle" placeholder="Ex: 100">
-                    </div>
-
-                    <button type="submit">🔮 Calcular RUL</button>
-                </form>
-
-                <div class="examples">
-                    <h4>📋 Exemplo de Dados:</h4>
-                    <p>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, 554.36, 2388.06, 9046.19, 1.30, 47.47, 521.66, 2388.02, 8138.62, 8.4195, 0.03, 392, 2388, 100.0, 38.86, 23.4190</p>
+                <h2>⚙️ Configuração de Análise</h2>
+                
+                <div class="form-group">
+                    <label for="analysis-type">Tipo de Análise</label>
+                    <select id="analysis-type">
+                        <option value="failure">Predição de Falhas (AI4I)</option>
+                        <option value="rul">Vida Útil Restante (CMAPSS)</option>
+                    </select>
                 </div>
 
-                <div class="loading" id="rulLoading">
-                    <div class="spinner"></div>
-                    <p>Processando...</p>
-                </div>
-
-                <div class="result-box" id="rulResult">
-                    <div class="result-header">📊 Resultado da Análise</div>
-                    <div class="result-item">
-                        <span class="result-label">Vida Útil Restante (RUL):</span>
-                        <span class="result-value" id="rulValue">-</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Confiança:</span>
-                        <span class="result-value" id="rulConfidence">-</span>
-                    </div>
-                    <div class="alert" id="rulAlert">
-                        <strong id="rulClassification">-</strong>
-                        <p id="rulRecommendation" style="margin-top: 8px;">-</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>ℹ️ Sobre NASA CMAPSS</h2>
-                <p style="line-height: 1.8; color: #666;">
-                    <strong>NASA CMAPSS</strong> (Commercial Modular Aero-Propulsion System Simulation) é um dataset de degradação de motores turbofan.
-                    <br><br>
-                    <strong>RUL (Remaining Useful Life)</strong> representa o número de ciclos operacionais restantes antes da falha do motor.
-                    <br><br>
-                    O modelo analisa <strong>21 sensores</strong> e <strong>3 configurações operacionais</strong> para prever a vida útil.
-                </p>
-            </div>
-        </div>
-
-        <!-- TAB: Failure Prediction -->
-        <div id="failure-tab" class="tab-content">
-            <div class="card">
-                <h2>⚠️ Predição de Falha de Máquina</h2>
-                <p style="color: #666; margin-bottom: 20px;">
-                    Insira os parâmetros operacionais da máquina para detectar riscos de falha.
-                </p>
-
-                <form id="failureForm">
+                <div id="failure-inputs">
                     <div class="form-group">
-                        <label>Temperatura do Ar [K]</label>
-                        <input type="number" step="0.1" id="airTemp" placeholder="Ex: 298.1" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Temperatura do Processo [K]</label>
-                        <input type="number" step="0.1" id="processTemp" placeholder="Ex: 308.6" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Velocidade Rotacional [rpm]</label>
-                        <input type="number" id="rotSpeed" placeholder="Ex: 1551" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Torque [Nm]</label>
-                        <input type="number" step="0.1" id="torque" placeholder="Ex: 42.8" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Desgaste da Ferramenta [min]</label>
-                        <input type="number" id="toolWear" placeholder="Ex: 0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Tipo de Produto</label>
-                        <select id="productType" required>
-                            <option value="">Selecione...</option>
-                            <option value="L">L (Low)</option>
-                            <option value="M">M (Medium)</option>
-                            <option value="H">H (High)</option>
+                        <label for="type">Tipo de Máquina</label>
+                        <select id="type">
+                            <option value="0">Low (L)</option>
+                            <option value="1">Medium (M)</option>
+                            <option value="2">High (H)</option>
                         </select>
                     </div>
 
-                    <button type="submit">🔍 Detectar Falha</button>
-                </form>
-
-                <div class="examples">
-                    <h4>📋 Valores Típicos:</h4>
-                    <p><strong>Normal:</strong> Air Temp: 298K, Process: 308K, Speed: 1500rpm, Torque: 40Nm, Wear: 50min</p>
-                    <p><strong>Risco:</strong> Air Temp: 310K, Process: 320K, Speed: 1200rpm, Torque: 60Nm, Wear: 200min</p>
-                </div>
-
-                <div class="loading" id="failureLoading">
-                    <div class="spinner"></div>
-                    <p>Analisando...</p>
-                </div>
-
-                <div class="result-box" id="failureResult">
-                    <div class="result-header">📊 Análise de Risco</div>
-                    <div class="result-item">
-                        <span class="result-label">Probabilidade de Falha:</span>
-                        <span class="result-value" id="failureProbability">-</span>
+                    <div class="form-group">
+                        <label for="air-temp">Temperatura do Ar (K)</label>
+                        <input type="number" id="air-temp" value="300" step="0.1" min="295" max="310">
                     </div>
-                    <div class="result-item">
-                        <span class="result-label">Confiança:</span>
-                        <span class="result-value" id="failureConfidence">-</span>
+
+                    <div class="form-group">
+                        <label for="process-temp">Temperatura de Processo (K)</label>
+                        <input type="number" id="process-temp" value="310" step="0.1" min="300" max="320">
                     </div>
-                    <div class="alert" id="failureAlert">
-                        <strong id="failureClassification">-</strong>
-                        <p id="failureRecommendation" style="margin-top: 8px;">-</p>
+
+                    <div class="form-group">
+                        <label for="rpm">Rotação (RPM)</label>
+                        <input type="number" id="rpm" value="1500" step="10" min="1000" max="3000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="torque">Torque (Nm)</label>
+                        <input type="number" id="torque" value="40" step="0.5" min="10" max="80">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tool-wear">Desgaste da Ferramenta (min)</label>
+                        <input type="number" id="tool-wear" value="100" step="1" min="0" max="300">
                     </div>
                 </div>
+
+                <button id="predict-btn">Executar Análise</button>
             </div>
 
+            <!-- CARD: ESTATÍSTICAS DO SISTEMA -->
             <div class="card">
-                <h2>ℹ️ Sobre AI4I Dataset</h2>
-                <p style="line-height: 1.8; color: #666;">
-                    <strong>AI4I 2020</strong> é um dataset sintético de manutenção preditiva que reflete dados industriais reais.
-                    <br><br>
-                    O modelo detecta falhas baseado em:
-                    <br>• Temperatura (ar e processo)
-                    <br>• Velocidade rotacional
-                    <br>• Torque aplicado
-                    <br>• Desgaste da ferramenta
-                    <br><br>
-                    <strong>5 tipos de falha:</strong> TWF, HDF, PWF, OSF, RNF
-                </p>
+                <h2>📊 Estatísticas do Sistema</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-predictions">-</div>
+                        <div class="stat-label">Predições</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-confidence">-</div>
+                        <div class="stat-label">Confiança Média</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-feedback">-</div>
+                        <div class="stat-label">Feedbacks</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-score">-</div>
+                        <div class="stat-label">Score Médio</div>
+                    </div>
+                </div>
+
+                <button id="refresh-stats-btn" style="margin-top: 20px;">Atualizar Estatísticas</button>
             </div>
         </div>
 
-        <!-- TAB: Chatbot -->
-        <div id="chat-tab" class="tab-content">
-            <div class="card chatbot">
-                <h2>💬 Assistente de Manutenção</h2>
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message bot">
-                        <div class="message-content">
-                            Olá! 👋 Sou seu assistente de manutenção preditiva. Posso ajudar com análises de RUL e detecção de falhas. Como posso ajudar?
-                        </div>
-                    </div>
+        <!-- LOADING -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 16px; color: var(--text-secondary);">Processando análise...</p>
+        </div>
+
+        <!-- RESULTADO DA ANÁLISE -->
+        <div class="card" id="result-display">
+            <h2>📋 Resultado da Análise</h2>
+
+            <!-- PREDIÇÃO -->
+            <div class="result-section">
+                <h3>🎯 Predição</h3>
+                <p><strong>Valor:</strong> <span id="pred-value">-</span></p>
+                <p><strong>Confiança:</strong> <span id="pred-confidence">-</span></p>
+                <p><strong>Tipo:</strong> <span id="pred-type">-</span></p>
+            </div>
+
+            <!-- RACIOCÍNIO -->
+            <div class="result-section">
+                <h3>🧠 Raciocínio</h3>
+                <p id="reasoning-conclusion">-</p>
+                <p><strong>Severidade:</strong> <span id="reasoning-severity" class="severity-badge">-</span></p>
+                <p><strong>Causas Identificadas:</strong></p>
+                <ul id="reasoning-causes" style="color: var(--text-secondary); padding-left: 20px;">
+                    <li>Carregando...</li>
+                </ul>
+            </div>
+
+            <!-- DECISÃO -->
+            <div class="result-section">
+                <h3>⚡ Recomendação</h3>
+                <p><strong>Ação:</strong> <span id="decision-action">-</span></p>
+                <p><strong>Prioridade:</strong> <span id="decision-priority">-</span></p>
+                <p><strong>Custo Estimado:</strong> <span id="decision-cost">-</span></p>
+                
+                <p style="margin-top: 16px;"><strong>Plano de Execução:</strong></p>
+                <ul class="execution-plan" id="execution-plan">
+                    <li>Carregando...</li>
+                </ul>
+            </div>
+
+            <!-- EXPLICAÇÃO GERADA -->
+            <div class="result-section">
+                <h3>📝 Explicação Completa</h3>
+                <div id="generated-explanation" style="white-space: pre-line; color: var(--text-secondary);">
+                    Carregando...
                 </div>
-                <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua mensagem...">
-                    <button id="sendBtn" style="width: auto; padding: 14px 30px;">Enviar</button>
+            </div>
+
+            <!-- FEEDBACK -->
+            <div class="feedback-section" id="feedback-section">
+                <h3 style="color: var(--accent-silver); margin-bottom: 12px;">💬 Avaliar Análise</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Como você avalia a qualidade desta análise?
+                </p>
+                
+                <div class="rating-container">
+                    <button class="rating-btn" data-score="0.2">👎 Ruim</button>
+                    <button class="rating-btn" data-score="0.5">😐 Regular</button>
+                    <button class="rating-btn" data-score="0.8">👍 Bom</button>
+                    <button class="rating-btn" data-score="1.0">⭐ Excelente</button>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
+                    <label for="feedback-text">Comentário (opcional)</label>
+                    <input type="text" id="feedback-text" placeholder="Deixe seu comentário...">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Api do render
-        const API_URL = "https://ai-maintenance-assistant.onrender.com";
-        
-        let apiOnline = false;
+        // ========================================
+        // CONFIGURAÇÃO DA API
+        // ========================================
+        // 🔧 AJUSTE AQUI A URL DA SUA API NO RENDER
+        const API_URL = "https://ai-maintenance-assistant.onrender.com";  // APi   
 
-        // Verificar status da API
+        // ========================================
+        // VARIÁVEIS GLOBAIS
+        // ========================================
+        let currentResultId = null;
+
+        // ========================================
+        // VERIFICAR STATUS DA API
+        // ========================================
         async function checkAPIStatus() {
+            const indicator = document.getElementById('status-indicator');
+            
             try {
                 const response = await fetch(`${API_URL}/health`);
-                if (response.ok) {
-                    apiOnline = true;
-                    document.getElementById('apiStatus').className = 'status';
-                    document.getElementById('apiStatus').innerHTML = `
-                        <span class="status-dot"></span>
-                        <span>API Online ✓</span>
-                    `;
-                } else {
-                    throw new Error('API offline');
-                }
-            } catch (error) {
-                apiOnline = false;
-                document.getElementById('apiStatus').className = 'status offline';
-                document.getElementById('apiStatus').innerHTML = `
-                    <span class="status-dot"></span>
-                    <span>API Offline</span>
-                `;
-            }
-        }
-
-        // Alternar tabs
-        function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(`${tab}-tab`).classList.add('active');
-        }
-
-        // RUL Prediction
-        document.getElementById('rulForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!apiOnline) {
-                alert('API offline! Verifique a conexão.');
-                return;
-            }
-
-            const sensorData = document.getElementById('sensorData').value
-                .split(',')
-                .map(v => parseFloat(v.trim()))
-                .filter(v => !isNaN(v));
-
-            if (sensorData.length < 20) {
-                alert('Por favor, insira pelo menos 20 valores de sensores!');
-                return;
-            }
-
-            document.getElementById('rulLoading').classList.add('show');
-            document.getElementById('rulResult').classList.remove('show');
-
-            try {
-                const payload = {
-                    sensor_data: sensorData,
-                    unit_id: parseInt(document.getElementById('unitId').value) || null,
-                    cycle: parseInt(document.getElementById('cycle').value) || null
-                };
-
-                const response = await fetch(`${API_URL}/predict/rul`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error('Erro na API');
-
-                const result = await response.json();
+                const data = await response.json();
                 
-                document.getElementById('rulValue').textContent = `${result.prediction.toFixed(2)} ciclos`;
-                document.getElementById('rulConfidence').textContent = `${(result.confidence * 100).toFixed(2)}%`;
-                document.getElementById('rulClassification').textContent = result.classification;
-                document.getElementById('rulRecommendation').textContent = result.recommendation;
-
-                const alertBox = document.getElementById('rulAlert');
-                if (result.classification.includes('CRÍTICO')) {
-                    alertBox.className = 'alert alert-critical';
-                } else if (result.classification.includes('ATENÇÃO')) {
-                    alertBox.className = 'alert alert-warning';
+                if (data.status === 'healthy') {
+                    indicator.textContent = '✅ API Online';
+                    indicator.classList.remove('offline');
                 } else {
-                    alertBox.className = 'alert alert-success';
+                    throw new Error('API não saudável');
                 }
-
-                document.getElementById('rulResult').classList.add('show');
             } catch (error) {
-                alert('Erro ao fazer predição: ' + error.message);
-            } finally {
-                document.getElementById('rulLoading').classList.remove('show');
+                indicator.textContent = '❌ API Offline';
+                indicator.classList.add('offline');
+                console.error('Erro ao conectar com API:', error);
             }
-        });
+        }
 
-        // Failure Prediction
-        document.getElementById('failureForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!apiOnline) {
-                alert('API offline! Verifique a conexão.');
-                return;
-            }
-
-            document.getElementById('failureLoading').classList.add('show');
-            document.getElementById('failureResult').classList.remove('show');
-
+        // ========================================
+        // CARREGAR ESTATÍSTICAS
+        // ========================================
+        async function loadStats() {
             try {
-                const payload = {
-                    air_temperature: parseFloat(document.getElementById('airTemp').value),
-                    process_temperature: parseFloat(document.getElementById('processTemp').value),
-                    rotational_speed: parseInt(document.getElementById('rotSpeed').value),
+                const response = await fetch(`${API_URL}/stats`);
+                const data = await response.json();
+                
+                document.getElementById('stat-predictions').textContent = 
+                    data.predictions?.total || '0';
+                
+                document.getElementById('stat-confidence').textContent = 
+                    data.memory?.short_term_size || '0';
+                
+                document.getElementById('stat-feedback').textContent = 
+                    data.feedback?.total_received || '0';
+                
+                document.getElementById('stat-score').textContent = 
+                    data.feedback?.average_score || 'N/A';
+                
+            } catch (error) {
+                console.error('Erro ao carregar stats:', error);
+            }
+        }
+
+        // ========================================
+        // FAZER PREDIÇÃO
+        // ========================================
+        async function makePrediction() {
+            const analysisType = document.getElementById('analysis-type').value;
+            const predictBtn = document.getElementById('predict-btn');
+            const loading = document.getElementById('loading');
+            const resultDisplay = document.getElementById('result-display');
+            const feedbackSection = document.getElementById('feedback-section');
+            
+            // Preparar dados
+            const requestData = {
+                analysis_type: analysisType,
+                data: {},
+                enable_reasoning: true,
+                enable_decision: true,
+                generate_explanation: true
+            };
+
+            if (analysisType === 'failure') {
+                requestData.data = {
+                    type: parseInt(document.getElementById('type').value),
+                    air_temperature: parseFloat(document.getElementById('air-temp').value),
+                    process_temperature: parseFloat(document.getElementById('process-temp').value),
+                    rpm: parseFloat(document.getElementById('rpm').value),
                     torque: parseFloat(document.getElementById('torque').value),
-                    tool_wear: parseInt(document.getElementById('toolWear').value),
-                    product_type: document.getElementById('productType').value
+                    tool_wear: parseFloat(document.getElementById('tool-wear').value)
                 };
+            }
 
-                const response = await fetch(`${API_URL}/predict/failure`, {
+            // UI Loading
+            predictBtn.disabled = true;
+            loading.classList.add('active');
+            resultDisplay.classList.remove('active');
+            feedbackSection.classList.remove('active');
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
                 });
 
-                if (!response.ok) throw new Error('Erro na API');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
 
                 const result = await response.json();
                 
-                document.getElementById('failureProbability').textContent = `${(result.confidence * 100).toFixed(2)}%`;
-                document.getElementById('failureConfidence').textContent = `${(result.confidence * 100).toFixed(2)}%`;
-                document.getElementById('failureClassification').textContent = result.classification;
-                document.getElementById('failureRecommendation').textContent = result.recommendation;
-
-                const alertBox = document.getElementById('failureAlert');
-                if (result.classification.includes('ALTO RISCO')) {
-                    alertBox.className = 'alert alert-critical';
-                } else if (result.classification.includes('MODERADO')) {
-                    alertBox.className = 'alert alert-warning';
-                } else {
-                    alertBox.className = 'alert alert-success';
-                }
-
-                document.getElementById('failureResult').classList.add('show');
-            } catch (error) {
-                alert('Erro ao fazer predição: ' + error.message);
-            } finally {
-                document.getElementById('failureLoading').classList.remove('show');
-            }
-        });
-
-        // Chatbot
-        function addMessage(text, sender) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
-            messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        async function handleChatMessage(message) {
-            addMessage(message, 'user');
-
-            const lowerMsg = message.toLowerCase();
-
-            // Detectar tipo de consulta
-            if (lowerMsg.includes('rul') || lowerMsg.includes('vida útil') || lowerMsg.includes('ciclos')) {
-                const numbers = message.match(/[\d.]+/g);
+                // Salvar ID do resultado
+                currentResultId = result.result_id;
                 
-                if (numbers && numbers.length >= 20) {
-                    const sensorData = numbers.slice(0, 24).map(n => parseFloat(n));
-                    
-                    try {
-                        const response = await fetch(`${API_URL}/predict/rul`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ sensor_data: sensorData })
-                        });
-
-                        const result = await response.json();
-                        
-                        addMessage(
-                            `🔧 <strong>Análise de RUL Completa!</strong><br><br>
-                            📊 <strong>Vida Útil Restante:</strong> ${result.prediction.toFixed(2)} ciclos<br>
-                            🎯 <strong>Confiança:</strong> ${(result.confidence * 100).toFixed(2)}%<br>
-                            ${result.classification}<br><br>
-                            💡 <strong>Recomendação:</strong><br>${result.recommendation}`,
-                            'bot'
-                        );
-                    } catch (error) {
-                        addMessage('Desculpe, ocorreu um erro ao processar a análise RUL. 😔', 'bot');
-                    }
-                } else {
-                    addMessage(
-                        'Para análise de RUL, preciso de pelo menos 20 valores de sensores.<br><br>' +
-                        '📋 <strong>Exemplo:</strong><br>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, ...',
-                        'bot'
-                    );
-                }
-            } 
-            else if (lowerMsg.includes('falha') || lowerMsg.includes('failure') || lowerMsg.includes('ai4i')) {
-                addMessage(
-                    '⚠️ Para análise de falha, preciso dos seguintes dados:<br><br>' +
-                    '• Temperatura do ar [K]<br>' +
-                    '• Temperatura do processo [K]<br>' +
-                    '• Velocidade rotacional [rpm]<br>' +
-                    '• Torque [Nm]<br>' +
-                    '• Desgaste da ferramenta [min]<br>' +
-                    '• Tipo de produto (L/M/H)<br><br>' +
-                    'Use a aba "Predição de Falha" para uma análise completa! 👆',
-                    'bot'
-                );
-            }
-            else if (lowerMsg.includes('ajuda') || lowerMsg.includes('help') || lowerMsg === 'oi' || lowerMsg === 'olá') {
-                addMessage(
-                    'Olá! 👋 Posso ajudar com:<br><br>' +
-                    '🔧 <strong>Análise de RUL (NASA CMAPSS)</strong><br>' +
-                    'Envie os dados dos 20+ sensores do motor turbofan<br><br>' +
-                    '⚠️ <strong>Detecção de Falhas (AI4I)</strong><br>' +
-                    'Use a aba específica para inserir parâmetros operacionais<br><br>' +
-                    '💡 <strong>Informações sobre os datasets</strong><br>' +
-                    'Pergunte sobre NASA CMAPSS ou AI4I<br><br>' +
-                    'Digite "exemplo" para ver dados de teste!',
-                    'bot'
-                );
-            }
-            else if (lowerMsg.includes('exemplo')) {
-                addMessage(
-                    '📋 <strong>Exemplo de Dados NASA CMAPSS:</strong><br><br>' +
-                    '<code>518.67, 641.82, 1589.70, 1400.60, 14.62, 21.61, 554.36, 2388.06, 9046.19, 1.30, 47.47, 521.66, 2388.02, 8138.62, 8.4195, 0.03, 392, 2388, 100.0, 38.86, 23.4190</code><br><br>' +
-                    'Cole esses valores na aba "Predição de RUL" ou envie aqui para análise!',
-                    'bot'
-                );
-            }
-            else if (lowerMsg.includes('cmapss') || lowerMsg.includes('nasa')) {
-                addMessage(
-                    '🚀 <strong>NASA CMAPSS</strong><br><br>' +
-                    'Dataset de degradação de motores turbofan usado pela NASA para pesquisa em manutenção preditiva.<br><br>' +
-                    '📊 <strong>Características:</strong><br>' +
-                    '• 21 sensores diferentes<br>' +
-                    '• 3 configurações operacionais<br>' +
-                    '• Múltiplos cenários de falha<br>' +
-                    '• RUL: Remaining Useful Life (ciclos restantes)<br><br>' +
-                    'Use para prever quando um motor precisará de manutenção!',
-                    'bot'
-                );
-            }
-            else if (lowerMsg.includes('ai4i')) {
-                addMessage(
-                    '🏭 <strong>AI4I 2020 Predictive Maintenance</strong><br><br>' +
-                    'Dataset sintético que reflete condições industriais reais.<br><br>' +
-                    '📊 <strong>Características:</strong><br>' +
-                    '• Temperatura (ar e processo)<br>' +
-                    '• Velocidade rotacional<br>' +
-                    '• Torque<br>' +
-                    '• Desgaste da ferramenta<br><br>' +
-                    '⚠️ <strong>5 tipos de falha:</strong><br>' +
-                    'TWF, HDF, PWF, OSF, RNF<br><br>' +
-                    'Detecta falhas antes que aconteçam!',
-                    'bot'
-                );
-            }
-            else {
-                addMessage(
-                    'Não entendi completamente. 🤔<br><br>' +
-                    'Tente:<br>' +
-                    '• "ajuda" - ver o que posso fazer<br>' +
-                    '• "exemplo" - ver dados de teste<br>' +
-                    '• Enviar dados de sensores para análise RUL<br>' +
-                    '• Perguntar sobre NASA CMAPSS ou AI4I',
-                    'bot'
-                );
+                // Exibir resultado
+                displayResult(result);
+                
+                // Mostrar seção de feedback
+                feedbackSection.classList.add('active');
+                
+            } catch (error) {
+                alert('❌ Erro ao fazer predição: ' + error.message);
+                console.error(error);
+            } finally {
+                predictBtn.disabled = false;
+                loading.classList.remove('active');
             }
         }
 
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const input = document.getElementById('chatInput');
-            if (input.value.trim()) {
-                handleChatMessage(input.value);
-                input.value = '';
+        // ========================================
+        // EXIBIR RESULTADO
+        // ========================================
+        function displayResult(result) {
+            const resultDisplay = document.getElementById('result-display');
+            
+            // PREDIÇÃO
+            const pred = result.prediction;
+            document.getElementById('pred-value').textContent = 
+                pred.type === 'failure' 
+                    ? `${(pred.value * 100).toFixed(1)}%` 
+                    : `${pred.value.toFixed(0)} ciclos`;
+            
+            document.getElementById('pred-confidence').textContent = 
+                `${(pred.confidence * 100).toFixed(0)}%`;
+            
+            document.getElementById('pred-type').textContent = 
+                pred.type === 'failure' ? 'Falha' : 'RUL';
+
+            // RACIOCÍNIO
+            const reasoning = result.reasoning;
+            document.getElementById('reasoning-conclusion').textContent = 
+                reasoning.conclusion;
+            
+            const severityBadge = document.getElementById('reasoning-severity');
+            severityBadge.textContent = reasoning.severity;
+            severityBadge.className = `severity-badge severity-${reasoning.severity.toLowerCase()}`;
+            
+            const causesList = document.getElementById('reasoning-causes');
+            causesList.innerHTML = reasoning.identified_causes
+                .map(cause => `<li>${cause}</li>`)
+                .join('');
+
+            // DECISÃO
+            const decision = result.decision;
+            document.getElementById('decision-action').textContent = 
+                decision.description;
+            
+            document.getElementById('decision-priority').textContent = 
+                decision.priority;
+            
+            document.getElementById('decision-cost').textContent = 
+                decision.estimated_cost;
+            
+            const planList = document.getElementById('execution-plan');
+            planList.innerHTML = decision.execution_plan
+                .map(step => `<li>${step}</li>`)
+                .join('');
+
+            // EXPLICAÇÃO
+            document.getElementById('generated-explanation').textContent = 
+                result.generated_explanation;
+
+            // Mostrar card
+            resultDisplay.classList.add('active');
+            
+            // Scroll suave para o resultado
+            resultDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ========================================
+        // ENVIAR FEEDBACK
+        // ========================================
+        async function sendFeedback(score) {
+            if (!currentResultId) {
+                alert('❌ Nenhuma análise para avaliar');
+                return;
             }
+
+            const feedbackText = document.getElementById('feedback-text').value;
+
+            try {
+                const response = await fetch(`${API_URL}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        result_id: currentResultId,
+                        score: score,
+                        feedback_text: feedbackText,
+                        user_id: 'web_user'
+                    })
+                });
+
+                if (response.ok) {
+                    alert('✅ Feedback enviado com sucesso!');
+                    document.getElementById('feedback-text').value = '';
+                    document.getElementById('feedback-section').classList.remove('active');
+                    
+                    // Atualizar stats
+                    loadStats();
+                } else {
+                    throw new Error('Erro ao enviar feedback');
+                }
+            } catch (error) {
+                alert('❌ Erro ao enviar feedback: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // ========================================
+        // EVENT LISTENERS
+        // ========================================
+        document.getElementById('predict-btn').addEventListener('click', makePrediction);
+        
+        document.getElementById('refresh-stats-btn').addEventListener('click', loadStats);
+        
+        // Rating buttons
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const score = parseFloat(btn.dataset.score);
+                sendFeedback(score);
+            });
         });
 
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('sendBtn').click();
-            }
+        // ========================================
+        // INICIALIZAÇÃO
+        // ========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            checkAPIStatus();
+            loadStats();
+            
+            // Verificar status a cada 30 segundos
+            setInterval(checkAPIStatus, 30000);
         });
-
-        // Inicializar
-        checkAPIStatus();
-        setInterval(checkAPIStatus, 30000);
     </script>
 </body>
 </html>
