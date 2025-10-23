@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: backend  # ou app (dependendo da sua estrutura)
-    branch: ./
+    branch: ml-backend
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
