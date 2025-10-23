@@ -396,6 +396,21 @@ async def reload_models():
         ]
     }
 
+
+import uvicorn
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "API online 🚀"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))  # ← usa a porta que o Render define
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+
+
 # ==================== EXECUTAR ====================
 if __name__ == "__main__":
     import uvicorn
