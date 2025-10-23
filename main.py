@@ -17,6 +17,8 @@ Database: Neon PostgreSQL
 """
 
 import os
+import uvicorn
+from fastapi import FastAPI
 
 # forçar  o uso da CPU
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -34,6 +36,7 @@ import json
 import os
 from pathlib import Path
 import logging
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -719,7 +722,7 @@ async def head_root():
 if __name__ == "__main__":
     import uvicorn
     
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8080))
     
     print("="*80)
     print(f"🚀 AGI GENERATIVA API v{settings.VERSION}")
