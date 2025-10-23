@@ -3,13 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#1e3c72">
+    <meta name="theme-color" content="#0A0A0A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>🏭 Manutenção Preditiva</title>
+    
+    <title>AGI v2.0 Mobile</title>
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
     <style>
+        /* ========================================
+           MOBILE OPTIMIZED - AGI MINIMAL CORE
+        ======================================== */
+        :root {
+            --bg-main: linear-gradient(180deg, #0A0A0A 0%, #1A1A1A 100%);
+            --bg-card: rgba(43, 43, 43, 0.95);
+            --border-soft: rgba(192, 192, 192, 0.15);
+            --text-primary: #E6E6E6;
+            --text-secondary: #8A8A8A;
+            --accent-silver: #A6A6A6;
+            --success: #3CE8A0;
+            --warning: #E8D13C;
+            --error: #E85454;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -17,928 +35,851 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        :root {
-            --primary: #1e3c72;
-            --secondary: #667eea;
-            --success: #2e7d32;
-            --warning: #ef6c00;
-            --danger: #c62828;
-            --background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 0;
+            line-height: 1.5;
             overflow-x: hidden;
         }
 
-        /* Dark Mode */
-        body.dark-mode {
-            --background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
-        }
-
-        /* Header */
-        .mobile-header {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 16px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .app-title h1 {
-            font-size: 1.2em;
-            color: var(--primary);
-            font-weight: 700;
-        }
-
-        .app-title p {
-            font-size: 0.75em;
-            color: #666;
-            margin-top: 2px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .icon-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: none;
-            background: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .icon-btn:active {
-            transform: scale(0.9);
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75em;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .status-badge.online {
-            background: #e8f5e9;
-            color: var(--success);
-        }
-
-        .status-badge.offline {
-            background: #ffebee;
-            color: var(--danger);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* Bottom Navigation */
-        .bottom-nav {
+        /* HEADER FIXO */
+        header {
             position: fixed;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0 12px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-soft);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 16px;
-            cursor: pointer;
-            color: #999;
-            transition: all 0.3s;
-            flex: 1;
-            position: relative;
-        }
-
-        .nav-item.active {
-            color: var(--secondary);
-        }
-
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 3px;
-            background: var(--secondary);
-            border-radius: 3px;
-        }
-
-        .nav-icon {
-            font-size: 1.5em;
-        }
-
-        .nav-label {
-            font-size: 0.7em;
-            font-weight: 600;
-        }
-
-        /* Badge */
-        .badge {
-            position: absolute;
-            top: 4px;
-            right: 12px;
-            background: var(--danger);
-            color: white;
-            font-size: 0.6em;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-weight: 700;
-        }
-
-        /* Container */
-        .container {
-            padding: 16px 16px 80px;
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.3s;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Cards */
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .card-icon {
-            font-size: 1.8em;
-        }
-
-        .card-title {
-            font-size: 1.1em;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .card-subtitle {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        /* Form */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.9em;
-            font-weight: 600;
-            color: #333;
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: var(--accent-silver);
+            text-align: center;
             margin-bottom: 8px;
         }
 
-        input, select, textarea {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
+        #status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
             border-radius: 12px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            background: #f9f9f9;
+            font-size: 0.75rem;
+            background: rgba(60, 232, 160, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+            margin: 0 auto;
+            display: block;
+            text-align: center;
+            width: fit-content;
         }
 
-        input:focus, select:focus, textarea:focus {
+        #status-indicator.offline {
+            background: rgba(232, 84, 84, 0.1);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        /* MAIN CONTENT */
+        main {
+            margin-top: 90px;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .card h2 {
+            color: var(--accent-silver);
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            background: var(--accent-silver);
+            color: #0A0A0A;
+            border-color: var(--accent-silver);
+            font-weight: 600;
+        }
+
+        /* FORM */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
-            border-color: var(--secondary);
-            background: white;
+            border-color: var(--accent-silver);
+            box-shadow: 0 0 0 3px rgba(166, 166, 166, 0.1);
         }
 
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-            font-family: inherit;
-        }
-
-        /* Buttons */
-        .btn {
+        /* BUTTONS */
+        button {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--accent-silver);
+            color: #0A0A0A;
             border: none;
             border-radius: 12px;
-            font-size: 1em;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            touch-action: manipulation;
         }
 
-        .btn:active {
+        button:active {
             transform: scale(0.98);
+            background: #C0C0C0;
         }
 
-        .btn:disabled {
-            background: #ccc;
-            box-shadow: none;
+        button:disabled {
+            background: var(--text-secondary);
+            opacity: 0.5;
         }
 
         .btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-            box-shadow: none;
-            margin-top: 8px;
+            background: rgba(166, 166, 166, 0.2);
+            color: var(--text-primary);
+            margin-top: 10px;
         }
 
-        /* Result Card */
-        .result-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-top: 16px;
-            display: none;
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
         }
 
-        .result-card.show {
-            display: block;
-            animation: slideUp 0.3s;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .result-header {
-            font-size: 1.2em;
-            font-weight: 700;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .result-item {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            padding: 14px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .result-label {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-
-        .result-value {
-            font-size: 1.2em;
-            font-weight: 700;
-        }
-
-        .alert {
+        .stat-item {
             padding: 16px;
+            background: rgba(26, 26, 26, 0.8);
             border-radius: 12px;
-            margin-top: 12px;
-            font-weight: 600;
             text-align: center;
+            border: 1px solid var(--border-soft);
         }
 
-        .alert-critical {
-            background: rgba(255, 255, 255, 0.95);
-            color: var(--danger);
+        .stat-value {
+            font-size: 1.8rem;
+            color: var(--accent-silver);
+            font-weight: 300;
+            margin-bottom: 6px;
         }
 
-        .alert-warning {
-            background: rgba(255, 255, 255, 0.95);
-            color: var(--warning);
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .alert-success {
-            background: rgba(255, 255, 255, 0.95);
-            color: var(--success);
-        }
-
-        /* Loading */
+        /* LOADING */
         .loading {
             display: none;
             text-align: center;
-            padding: 30px;
+            padding: 40px 20px;
         }
 
-        .loading.show {
+        .loading.active {
             display: block;
         }
 
         .spinner {
+            border: 3px solid var(--border-soft);
+            border-top: 3px solid var(--accent-silver);
+            border-radius: 50%;
             width: 50px;
             height: 50px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top-color: var(--secondary);
-            border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 16px;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        /* History List */
-        .history-list {
-            max-height: 400px;
-            overflow-y: auto;
+        /* RESULT */
+        #result-display {
+            display: none;
         }
 
-        .history-item {
-            background: #f9f9f9;
-            padding: 12px;
-            border-radius: 10px;
+        #result-display.active {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: rgba(26, 26, 26, 0.7);
+            border-left: 3px solid var(--accent-silver);
+            border-radius: 8px;
+        }
+
+        .result-section h3 {
+            color: var(--accent-silver);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-section p {
+            color: var(--text-primary);
+            line-height: 1.6;
             margin-bottom: 8px;
-            border-left: 4px solid var(--secondary);
+            font-size: 0.9rem;
         }
 
-        .history-header {
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .severity-low { background: rgba(60, 232, 160, 0.2); color: var(--success); }
+        .severity-medium { background: rgba(232, 209, 60, 0.2); color: var(--warning); }
+        .severity-high { background: rgba(232, 84, 84, 0.2); color: var(--error); }
+        .severity-critical { background: rgba(232, 84, 84, 0.4); color: var(--error); }
+
+        .execution-plan {
+            list-style: none;
+            padding: 0;
+        }
+
+        .execution-plan li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-soft);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .execution-plan li:last-child {
+            border-bottom: none;
+        }
+
+        /* FEEDBACK */
+        .feedback-section {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(60, 232, 160, 0.05);
+            border: 1px solid var(--success);
+            border-radius: 12px;
+        }
+
+        .feedback-section.active {
+            display: block;
+        }
+
+        .rating-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .rating-btn {
+            padding: 12px;
+            font-size: 0.9rem;
+            background: rgba(166, 166, 166, 0.2);
+            color: var(--text-primary);
+        }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-soft);
+            padding: 8px;
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-btn.active {
+            color: var(--accent-silver);
+        }
+
+        .nav-btn span {
+            font-size: 1.4rem;
+        }
+
+        /* HIDDEN SECTIONS */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* ACCORDION */
+        .accordion {
+            margin-top: 12px;
+        }
+
+        .accordion-item {
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            padding: 12px;
+            background: rgba(26, 26, 26, 0.8);
+            color: var(--text-primary);
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
         }
 
-        .history-type {
-            font-weight: 700;
-            color: var(--primary);
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(15, 15, 15, 0.9);
+            padding: 0 12px;
         }
 
-        .history-time {
-            font-size: 0.75em;
-            color: #999;
+        .accordion-content.active {
+            max-height: 500px;
+            padding: 12px;
         }
 
-        .history-result {
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        /* Chart */
-        .chart-container {
-            position: relative;
-            height: 250px;
-            margin-top: 16px;
-        }
-
-        /* Chat */
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 140px);
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            margin-bottom: 12px;
-        }
-
-        .message {
-            margin-bottom: 12px;
-            animation: slideIn 0.3s;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .message.user {
-            text-align: right;
-        }
-
-        .message-bubble {
-            display: inline-block;
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 0.95em;
-            line-height: 1.5;
-        }
-
-        .message.bot .message-bubble {
-            background: white;
-            color: #333;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.user .message-bubble {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .chat-input-container {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 0.95em;
-        }
-
-        .send-btn {
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
-            padding: 0;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
-        }
-
-        /* Notification Toast */
+        /* TOAST */
         .toast {
             position: fixed;
-            bottom: 90px;
+            top: 100px;
             left: 50%;
             transform: translateX(-50%);
-            background: #333;
-            color: white;
+            background: rgba(60, 232, 160, 0.95);
+            color: #0A0A0A;
             padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 0.9em;
-            z-index: 1000;
+            border-radius: 20px;
+            font-weight: 600;
+            z-index: 2000;
             display: none;
-            animation: slideUpToast 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         .toast.show {
             display: block;
+            animation: slideDown 0.3s ease;
         }
 
-        @keyframes slideUpToast {
-            from { opacity: 0; transform: translate(-50%, 20px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
+        @keyframes slideDown {
+            from { transform: translate(-50%, -20px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
         }
 
-        /* Export Options */
-        .export-options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 12px;
-        }
-
-        .export-btn {
-            padding: 12px;
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 0.9em;
-            font-weight: 600;
-            color: #333;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .export-btn:active {
-            transform: scale(0.95);
-            border-color: var(--secondary);
-        }
-
-        /* Settings Modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            padding: 24px;
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 1.3em;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .close-btn {
-            font-size: 1.5em;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .setting-item {
-            padding: 16px 0;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 26px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 26px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--secondary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(24px);
-        }
-
-        /* Quick Stats */
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px;
-            border-radius: 12px;
+        /* PULL TO REFRESH */
+        .ptr {
             text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .stat-label {
-            font-size: 0.8em;
-            opacity: 0.9;
+            padding: 10px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="mobile-header">
-        <div class="header-content">
-            <div class="app-title">
-                <h1>🏭 Manutenção Preditiva</h1>
-                <p id="headerSubtitle">NASA CMAPSS + AI4I</p>
-            </div>
-            <div class="header-actions">
-                <button class="icon-btn" onclick="openSettings()">⚙️</button>
-                <div id="apiStatus" class="status-badge offline">
-                    <span class="status-dot"></span>
-                    <span>OFF</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
 
-    <!-- Container -->
-    <div class="container">
-        <!-- TAB: RUL -->
-        <div id="rul-content" class="tab-content active">
+    <!-- HEADER -->
+    <header>
+        <h1>AGI v2.0</h1>
+        <div id="status-indicator">🔄 Verificando...</div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- SECTION: ANÁLISE -->
+        <div class="section active" id="section-analyze">
             <div class="card">
-                <div class="card-header">
-                    <span class="card-icon">🔧</span>
-                    <div>
-                        <div class="card-title">Análise de RUL</div>
-                        <div class="card-subtitle">Vida útil do motor</div>
-                    </div>
+                <h2>⚙️ Análise</h2>
+                
+                <div class="tabs">
+                    <div class="tab active" data-type="failure">Falhas</div>
+                    <div class="tab" data-type="rul">RUL</div>
                 </div>
 
-                <form id="rulForm">
+                <div id="failure-inputs">
                     <div class="form-group">
-                        <label>📊 Dados dos Sensores</label>
-                        <textarea id="sensorData" placeholder="Cole os valores dos sensores..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn">🔮 Calcular RUL</button>
-                    <button type="button" class="btn btn-secondary" onclick="fillExample('rul')">📋 Usar Exemplo</button>
-                </form>
-
-                <div class="loading" id="rulLoading">
-                    <div class="spinner"></div>
-                    <p style="color: white;">Processando...</p>
-                </div>
-
-                <div class="result-card" id="rulResult">
-                    <div class="result-header">📊 Resultado da Análise</div>
-                    <div class="result-item">
-                        <span class="result-label">RUL:</span>
-                        <span class="result-value" id="rulValue">-</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Confiança:</span>
-                        <span class="result-value" id="rulConfidence">-</span>
-                    </div>
-                    <div class="alert" id="rulAlert">
-                        <div style="font-size: 1.1em; margin-bottom: 8px;" id="rulClassification">-</div>
-                        <div style="font-size: 0.9em;" id="rulRecommendation">-</div>
-                    </div>
-
-                    <div class="export-options">
-                        <button class="export-btn" onclick="saveToHistory('rul')">💾 Salvar</button>
-                        <button class="export-btn" onclick="shareResult('rul')">📤 Compartilhar</button>
-                    </div>
-                </div>
-
-                <!-- Chart -->
-                <div class="card" id="rulChartCard" style="display: none;">
-                    <h3 style="color: var(--primary); margin-bottom: 12px;">📈 Histórico de Análises</h3>
-                    <div class="chart-container">
-                        <canvas id="rulChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB: Failure -->
-        <div id="failure-content" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-icon">⚠️</span>
-                    <div>
-                        <div class="card-title">Detecção de Falha</div>
-                        <div class="card-subtitle">AI4I Dataset</div>
-                    </div>
-                </div>
-
-                <form id="failureForm">
-                    <div class="form-group">
-                        <label>🌡️ Temperatura do Ar [K]</label>
-                        <input type="number" step="0.1" id="airTemp" placeholder="298.1" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🔥 Temperatura do Processo [K]</label>
-                        <input type="number" step="0.1" id="processTemp" placeholder="308.6" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>⚡ Velocidade Rotacional [rpm]</label>
-                        <input type="number" id="rotSpeed" placeholder="1551" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🔩 Torque [Nm]</label>
-                        <input type="number" step="0.1" id="torque" placeholder="42.8" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🛠️ Desgaste da Ferramenta [min]</label>
-                        <input type="number" id="toolWear" placeholder="0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>📦 Tipo de Produto</label>
-                        <select id="productType" required>
-                            <option value="">Selecione...</option>
-                            <option value="L">L (Low)</option>
-                            <option value="M">M (Medium)</option>
-                            <option value="H">H (High)</option>
+                        <label>Tipo</label>
+                        <select id="type">
+                            <option value="0">Low</option>
+                            <option value="1">Medium</option>
+                            <option value="2">High</option>
                         </select>
                     </div>
 
-                    <button type="submit" class="btn">🔍 Detectar Falha</button>
-                    <button type="button" class="btn btn-secondary" onclick="fillExample('failure')">📋 Usar Exemplo</button>
-                </form>
+                    <div class="form-group">
+                        <label>Temp. Ar (K)</label>
+                        <input type="number" id="air-temp" value="300" step="0.1">
+                    </div>
 
-                <div class="loading" id="failureLoading">
-                    <div class="spinner"></div>
-                    <p style="color: white;">Analisando...</p>
+                    <div class="form-group">
+                        <label>Temp. Processo (K)</label>
+                        <input type="number" id="process-temp" value="310" step="0.1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>RPM</label>
+                        <input type="number" id="rpm" value="1500" step="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Torque (Nm)</label>
+                        <input type="number" id="torque" value="40" step="0.5">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Desgaste (min)</label>
+                        <input type="number" id="tool-wear" value="100" step="1">
+                    </div>
                 </div>
 
-                <div class="result-card" id="failureResult">
-                    <div class="result-header">⚠️ Análise de Risco</div>
-                    <div class="result-item">
-                        <span class="result-label">Probabilidade:</span>
-                        <span class="result-value" id="failureProbability">-</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Confiança:</span>
-                        <span class="result-value" id="failureConfidence">-</span>
-                    </div>
-                    <div class="alert" id="failureAlert">
-                        <div style="font-size: 1.1em; margin-bottom: 8px;" id="failureClassification">-</div>
-                        <div style="font-size: 0.9em;" id="failureRecommendation">-</div>
-                    </div>
-
-                    <div class="export-options">
-                        <button class="export-btn" onclick="saveToHistory('failure')">💾 Salvar</button>
-                        <button class="export-btn" onclick="shareResult('failure')">📤 Compartilhar</button>
-                    </div>
-                </div>
+                <button id="predict-btn">🚀 Analisar</button>
             </div>
-        </div>
 
-        <!-- TAB: History -->
-        <div id="history-content" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-icon">📜</span>
-                    <div>
-                        <div class="card-title">Histórico de Análises</div>
-                        <div class="card-subtitle" id="historyCount">0 análises</div>
-                    </div>
-                </div>
-
-                <div class="quick-stats" id="quickStats" style="display: none;">
-                    <div class="stat-box">
-                        <div class="stat-value" id="totalAnalyses">0</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="avgConfidence">0%</div>
-                        <div class="stat-label">Confiança Média</div>
-                    </div>
-                </div>
-
-                <div class="history-list" id="historyList">
-                    <div style="text-align: center; padding: 40px; color: #999;">
-                        <div style="font-size: 3em; margin-bottom: 12px;">📭</div>
-                        <p>Nenhuma análise ainda</p>
-                        <p style="font-size: 0.9em; margin-top: 8px;">Faça sua primeira análise!</p>
-                    </div>
-                </div>
-
-                <button class="btn btn-secondary" onclick="clearHistory()" id="clearHistoryBtn" style="display: none; margin-top: 16px;">🗑️ Limpar Histórico</button>
+            <!-- LOADING -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando...</p>
             </div>
-        </div>
 
-        <!-- TAB: Chat -->
-        <div id="chat-content" class="tab-content">
-            <div class="card chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message bot">
-                        <div class="message-bubble">
-                            👋 Olá! Sou seu assistente de manutenção preditiva. Como posso ajudar?
+            <!-- RESULT -->
+            <div class="card" id="result-display">
+                <h2>📋 Resultado</h2>
+
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>🎯 Predição</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <p><strong>Valor:</strong> <span id="pred-value">-</span></p>
+                            <p><strong>Confiança:</strong> <span id="pred-confidence">-</span></p>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>🧠 Raciocínio</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <p id="reasoning-conclusion">-</p>
+                            <p><strong>Severidade:</strong> <span id="reasoning-severity" class="severity-badge">-</span></p>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span>⚡ Decisão</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <p><strong>Ação:</strong> <span id="decision-action">-</span></p>
+                            <p><strong>Prioridade:</strong> <span id="decision-priority">-</span></p>
+                            <p><strong>Custo:</strong> <span id="decision-cost">-</span></p>
                         </div>
                     </div>
                 </div>
-                <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua mensagem...">
-                    <button class="btn send-btn" id="sendBtn">📤</button>
+
+                <!-- FEEDBACK -->
+                <div class="feedback-section" id="feedback-section">
+                    <h3 style="color: var(--accent-silver); margin-bottom: 10px; font-size: 0.95rem;">💬 Avaliar</h3>
+                    
+                    <div class="rating-container">
+                        <button class="rating-btn" data-score="0.2">👎 Ruim</button>
+                        <button class="rating-btn" data-score="0.5">😐 OK</button>
+                        <button class="rating-btn" data-score="0.8">👍 Bom</button>
+                        <button class="rating-btn" data-score="1.0">⭐ Top</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('rul')">
-            <div class="nav-icon">🔧</div>
-            <div class="nav-label">RUL</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('failure')">
-            <div class="nav-icon">⚠️</div>
-            <div class="nav-label">Falha</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('history')">
-            <div class="nav-icon">📜</div>
-            <div class="nav-label">Histórico</div>
-            <span class="badge" id="historyBadge" style="display: none;">0</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('chat')">
-            <div class="nav-icon">💬</div>
-            <div class="nav-label">Chat</div>
-        </div>
-    </div>
+        <!-- SECTION: ESTATÍSTICAS -->
+        <div class="section" id="section-stats">
+            <div class="card">
+                <h2>📊 Estatísticas</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-predictions">-</div>
+                        <div class="stat-label">Predições</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-confidence">-</div>
+                        <div class="stat-label">Confiança</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-feedback">-</div>
+                        <div class="stat-label">Feedbacks</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-score">-</div>
+                        <div class="stat-label">Score</div>
+                    </div>
+                </div>
 
-    <!-- Settings Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">⚙️ Configurações</div>
-                <button class="close-btn" onclick="closeSettings()">✕</button>
+                <button class="btn-secondary" onclick="loadStats()">🔄 Atualizar</button>
             </div>
+        </div>
 
-            <div class="setting-item">
-                <div>
-                    <div style="font-weight: 600;">🌙 Modo Escuro</div>
-                    <div style="font-size: 0.85em; color
+        <!-- SECTION: SOBRE -->
+        <div class="section" id="section-about">
+            <div class="card">
+                <h2>ℹ️ Sobre</h2>
+                <p style="color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px;">
+                    <strong style="color: var(--accent-silver);">AGI Generativa v2.0</strong><br>
+                    Sistema híbrido de inteligência artificial com capacidades de predição, raciocínio, decisão e aprendizado contínuo.
+                </p>
+                
+                <div style="background: rgba(26,26,26,0.8); padding: 16px; border-radius: 8px; margin-top: 16px;">
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 8px;">
+                        <strong>Módulos:</strong><br>
+                        • Predição (ML/DL)<br>
+                        • Raciocínio Cognitivo<br>
+                        • Decisão Inteligente<br>
+                        • RLHF (Feedback Loop)<br>
+                        • Memória Persistente
+                    </p>
+                </div>
+
+                <button class="btn-secondary" onclick="window.location.reload()">🔄 Recarregar App</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" onclick="showSection('analyze')">
+            <span>🔬</span>
+            <span style="font-size: 0.7rem;">Análise</span>
+        </button>
+        <button class="nav-btn" onclick="showSection('stats')">
+            <span>📊</span>
+            <span style="font-size: 0.7rem;">Stats</span>
+        </button>
+        <button class="nav-btn" onclick="showSection('about')">
+            <span>ℹ️</span>
+            <span style="font-size: 0.7rem;">Sobre</span>
+        </button>
+    </nav>
+
+    <script>
+        // ========================================
+        // CONFIGURAÇÃO
+        // ========================================
+        const API_URL = "http://localhost:8000";  // TROCAR: https://seu-app.onrender.com
+
+        let currentResultId = null;
+        let currentAnalysisType = 'failure';
+
+        // ========================================
+        // NAVIGATION
+        // ========================================
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`section-${section}`).classList.add('active');
+            event.target.closest('.nav-btn').classList.add('active');
+        }
+
+        // ========================================
+        // ACCORDION
+        // ========================================
+        function toggleAccordion(header) {
+            const content = header.nextElementSibling;
+            const isActive = content.classList.contains('active');
+            
+            // Fechar todos
+            document.querySelectorAll('.accordion-content').forEach(c => {
+                c.classList.remove('active');
+            });
+            
+            // Abrir este se estava fechado
+            if (!isActive) {
+                content.classList.add('active');
+            }
+        }
+
+        // ========================================
+        // TOAST
+        // ========================================
+        function showToast(message, duration = 2000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        // ========================================
+        // TABS
+        // ========================================
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentAnalysisType = tab.dataset.type;
+            });
+        });
+
+        // ========================================
+        // API STATUS
+        // ========================================
+        async function checkAPIStatus() {
+            const indicator = document.getElementById('status-indicator');
+            
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    indicator.textContent = '✅ Online';
+                    indicator.classList.remove('offline');
+                } else {
+                    throw new Error('Unhealthy');
+                }
+            } catch (error) {
+                indicator.textContent = '❌ Offline';
+                indicator.classList.add('offline');
+            }
+        }
+
+        // ========================================
+        // STATS
+        // ========================================
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                const data = await response.json();
+                
+                document.getElementById('stat-predictions').textContent = 
+                    data.predictions?.total || '0';
+                document.getElementById('stat-confidence').textContent = 
+                    data.memory?.short_term_size || '0';
+                document.getElementById('stat-feedback').textContent = 
+                    data.feedback?.total_received || '0';
+                document.getElementById('stat-score').textContent = 
+                    data.feedback?.average_score || '-';
+                
+                showToast('✅ Stats atualizados');
+            } catch (error) {
+                showToast('❌ Erro ao carregar stats');
+            }
+        }
+
+        // ========================================
+        // PREDICTION
+        // ========================================
+        async function makePrediction() {
+            const requestData = {
+                analysis_type: currentAnalysisType,
+                data: {
+                    type: parseInt(document.getElementById('type').value),
+                    air_temperature: parseFloat(document.getElementById('air-temp').value),
+                    process_temperature: parseFloat(document.getElementById('process-temp').value),
+                    rpm: parseFloat(document.getElementById('rpm').value),
+                    torque: parseFloat(document.getElementById('torque').value),
+                    tool_wear: parseFloat(document.getElementById('tool-wear').value)
+                },
+                enable_reasoning: true,
+                enable_decision: true,
+                generate_explanation: true
+            };
+
+            const predictBtn = document.getElementById('predict-btn');
+            const loading = document.getElementById('loading');
+            const resultDisplay = document.getElementById('result-display');
+
+            predictBtn.disabled = true;
+            loading.classList.add('active');
+            resultDisplay.classList.remove('active');
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                currentResultId = result.result_id;
+                
+                displayResult(result);
+                showToast('✅ Análise concluída');
+                
+            } catch (error) {
+                showToast('❌ Erro: ' + error.message);
+            } finally {
+                predictBtn.disabled = false;
+                loading.classList.remove('active');
+            }
+        }
+
+        // ========================================
+        // DISPLAY RESULT
+        // ========================================
+        function displayResult(result) {
+            const pred = result.prediction;
+            document.getElementById('pred-value').textContent = 
+                pred.type === 'failure' 
+                    ? `${(pred.value * 100).toFixed(1)}%` 
+                    : `${pred.value.toFixed(0)} ciclos`;
+            document.getElementById('pred-confidence').textContent = 
+                `${(pred.confidence * 100).toFixed(0)}%`;
+
+            const reasoning = result.reasoning;
+            document.getElementById('reasoning-conclusion').textContent = 
+                reasoning.conclusion;
+            const severityBadge = document.getElementById('reasoning-severity');
+            severityBadge.textContent = reasoning.severity;
+            severityBadge.className = `severity-badge severity-${reasoning.severity.toLowerCase()}`;
+
+            const decision = result.decision;
+            document.getElementById('decision-action').textContent = 
+                decision.description;
+            document.getElementById('decision-priority').textContent = 
+                decision.priority;
+            document.getElementById('decision-cost').textContent = 
+                decision.estimated_cost;
+
+            document.getElementById('result-display').classList.add('active');
+            document.getElementById('feedback-section').classList.add('active');
+            
+            // Scroll to result
+            document.getElementById('result-display').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+
+        // ========================================
+        // FEEDBACK
+        // ========================================
+        async function sendFeedback(score) {
+            if (!currentResultId) {
+                showToast('❌ Nenhuma análise para avaliar');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/feedback`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        result_id: currentResultId,
+                        score: score,
+                        feedback_text: '',
+                        user_id: 'mobile_user'
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('✅ Feedback enviado!');
+                    document.getElementById('feedback-section').classList.remove('active');
+                    loadStats();
+                } else {
+                    throw new Error
