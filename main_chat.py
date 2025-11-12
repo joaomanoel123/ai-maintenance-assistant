@@ -1,13 +1,13 @@
 """
 ===============================================================================
-MAIN CHAT API - Pipeline AGI v2.0 com Memória Vetorial
+MAIN CHAT API - Pipeline AGI v2.0 com Memória Vetorial (REFATORADO)
 ===============================================================================
 
 Backend completo com:
 - WebSocket para chat streaming
 - Memória vetorial (ChromaDB)
 - Modelos preditivos integrados
-- Ingestão de datasets Kaggle
+- Pipeline modular e organizado
 - Persistência no Neon PostgreSQL
 
 Autor: João Manoel
@@ -23,13 +23,11 @@ from typing import Optional, Dict, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Imports dos módulos customizados
 from model_loader import load_models, MODELS, model_predict
 from embeddings import VectorMemory
-from chat_pipeline import respond_stream_generator, extract_prediction_intent
 from db import save_experience_record, init_database
 
 # Setup logging
@@ -72,6 +70,156 @@ class PredictRequest(BaseModel):
 class ChatMessage(BaseModel):
     message: str
     user_id: str = "anonymous"
+
+# ============================================
+# PIPELINE CORE
+# ============================================
+
+def search_context(question: str, n_results: int = 5) -> str:
+    """
+    Busca contexto relevante na memória vetorial
+    """
+    if not memory or not memory.collection:
+        logger.warning("Memória não disponível para busca")
+        return ""
+    
+    try:
+        results = memory.query(question, n_results=n_results)
+        
+        if not results or not results.get("documents"):
+            return ""
+        
+        # Extrai documentos relevantes
+        context_docs = []
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+        
+        for doc, meta in zip(documents, metadatas):
+            priority = meta.get("priority", "normal")
+            category = meta.get("category", "general")
+            context_docs.append(f"[{category.upper()}] {doc}")
+        
+        context = "\n".join(context_docs)
+        logger.info(f"📚 Contexto recuperado: {len(documents)} documentos")
+        
+        return context
+    
+    except Exception as e:
+        logger.error(f"Erro ao buscar contexto: {e}")
+        return ""
+
+
+def build_system_prompt(context: str) -> str:
+    """
+    Constrói o prompt do sistema com contexto
+    """
+    base_prompt = """Você é uma AGI (Inteligência Artificial Geral) avançada especializada em análise preditiva e manutenção industrial.
+
+CAPACIDADES:
+- Predição de RUL (Remaining Useful Life) com modelo CMAPSS
+- Predição de falhas industriais com modelo AI4I
+- Raciocínio causal e temporal
+- Análise de dados de sensores
+- Recomendações de manutenção
+
+CONTEXTO RELEVANTE:
+{context}
+
+INSTRUÇÕES:
+1. Use o contexto acima para fundamentar suas respostas
+2. Seja técnico mas acessível
+3. Para predições, explique o raciocínio
+4. Sugira ações preventivas quando apropriado
+5. Se não tiver certeza, seja honesto sobre limitações"""
+
+    return base_prompt.format(context=context)
+
+
+async def generate_answer_stream(question: str, context: str, user_id: str):
+    """
+    Gera resposta com streaming usando HuggingFace Inference API
+    
+    Yields:
+        str: Tokens da resposta
+    """
+    try:
+        from huggingface_hub import AsyncInferenceClient
+        
+        hf_token = os.getenv("HUGGINGFACE_TOKEN")
+        model = os.getenv("MODEL", "meta-llama/Llama-3.3-70B-Instruct")
+        
+        client = AsyncInferenceClient(token=hf_token)
+        
+        system_prompt = build_system_prompt(context)
+        
+        # Prompt completo
+        full_prompt = f"""{system_prompt}
+
+---
+
+Pergunta do usuário: {question}
+
+Resposta:"""
+        
+        # Streaming token por token
+        stream = await client.text_generation(
+            prompt=full_prompt,
+            model=model,
+            max_new_tokens=800,
+            temperature=0.7,
+            top_p=0.9,
+            repetition_penalty=1.1,
+            stream=True
+        )
+        
+        async for token in stream:
+            yield token
+    
+    except Exception as e:
+        logger.error(f"Erro ao gerar resposta: {e}")
+        yield f"[ERRO] Não foi possível gerar resposta: {str(e)}"
+
+
+async def pipeline(question: str, user_id: str = "anonymous"):
+    """
+    Pipeline principal de processamento
+    
+    1. Busca contexto na memória vetorial
+    2. Gera resposta com LLM usando contexto
+    3. Salva experiência no banco
+    4. Retorna resposta em streaming
+    """
+    logger.info(f"🔄 Pipeline iniciado para: {question[:50]}...")
+    
+    # 1. Buscar contexto relevante
+    context = search_context(question)
+    
+    # 2. Detectar intenção de predição
+    prediction_result = None
+    if any(keyword in question.lower() for keyword in ['prever', 'predição', 'rul', 'falha', 'cmapss', 'ai4i']):
+        logger.info("🎯 Intenção de predição detectada")
+        # Aqui você pode chamar extract_prediction_intent do chat_pipeline.py
+        # prediction_result = extract_prediction_intent(question, MODELS)
+    
+    # 3. Gerar resposta com streaming
+    full_response = ""
+    async for chunk in generate_answer_stream(question, context, user_id):
+        full_response += chunk
+        yield chunk
+    
+    # 4. Salvar experiência no banco (após completar resposta)
+    try:
+        await save_experience_record(
+            user_id=user_id,
+            user_input=question,
+            assistant_output=full_response,
+            context_used=context,
+            prediction_data=prediction_result
+        )
+        logger.info("💾 Experiência salva no banco")
+    except Exception as e:
+        logger.error(f"Erro ao salvar experiência: {e}")
+
 
 # ============================================
 # STARTUP
@@ -130,10 +278,11 @@ def read_root():
     """Endpoint raiz"""
     return {
         "status": "ok",
-        "message": "AGI Chat + Predictive API",
+        "message": "AGI Chat + Predictive API (Pipeline v2.1)",
         "version": "2.1",
         "endpoints": {
             "predict": "/predict",
+            "ask": "/ask",
             "chat_ws": "/ws-chat",
             "health": "/health",
             "memory_stats": "/memory/stats"
@@ -152,6 +301,31 @@ async def health_check():
         "memory": memory_status,
         "timestamp": datetime.now().isoformat()
     }
+
+@app.post("/ask")
+async def ask_endpoint(data: ChatMessage):
+    """
+    Endpoint REST para perguntas (sem streaming)
+    Similar ao exemplo do pipeline.py
+    """
+    if not memory:
+        raise HTTPException(status_code=503, detail="Memória não inicializada")
+    
+    try:
+        # Coletar toda a resposta
+        full_answer = ""
+        async for chunk in pipeline(data.message, data.user_id):
+            full_answer += chunk
+        
+        return {
+            "question": data.message,
+            "answer": full_answer,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Erro no endpoint /ask: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/predict")
 async def predict(payload: PredictRequest):
@@ -236,7 +410,7 @@ async def add_to_memory(data: Dict[str, Any]):
 @app.websocket("/ws-chat")
 async def websocket_chat(websocket: WebSocket):
     """
-    WebSocket para chat com streaming
+    WebSocket para chat com streaming usando pipeline
     """
     await websocket.accept()
     logger.info("✅ Cliente conectado ao chat")
@@ -265,14 +439,9 @@ async def websocket_chat(websocket: WebSocket):
                 })
                 continue
             
-            # Gerar resposta com streaming
+            # Usar pipeline para gerar resposta com streaming
             try:
-                async for chunk in respond_stream_generator(
-                    user_message, 
-                    user_id, 
-                    memory,
-                    MODELS
-                ):
+                async for chunk in pipeline(user_message, user_id):
                     await websocket.send_json({
                         "type": "token",
                         "data": chunk
@@ -402,10 +571,11 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     
     logger.info("="*80)
-    logger.info("🚀 AGI CHAT API v2.1")
+    logger.info("🚀 AGI CHAT API v2.1 (PIPELINE)")
     logger.info("="*80)
     logger.info(f"📡 Porta: {port}")
     logger.info(f"🔗 WebSocket: ws://localhost:{port}/ws-chat")
+    logger.info(f"📝 REST Ask: http://localhost:{port}/ask")
     logger.info(f"📚 Docs: http://localhost:{port}/docs")
     logger.info("="*80)
     
