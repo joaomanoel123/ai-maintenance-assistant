@@ -29,6 +29,7 @@ from model_loader import load_models, MODELS, model_predict
 from embeddings import VectorMemory
 from db import save_experience_record, init_database
 from llm_huggingface import create_llm, HuggingFaceConfig
+from utils.shared import format_prompt_for_chat
 
 # Setup logging
 logging.basicConfig(
