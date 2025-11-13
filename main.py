@@ -25,6 +25,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi import FastAPI
+from chat_pipeline import respond_stream_generator
 
 # Imports dos módulos customizados
 from model_loader import load_models, MODELS, model_predict
