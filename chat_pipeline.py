@@ -22,7 +22,8 @@ from datetime import datetime
 from embeddings import VectorMemory
 from model_loader import model_predict
 from db import save_experience_record
-from llm_huggingface import generate_response_stream, format_prompt_for_chat
+from llm_huggingface import generate_response_stream
+from utils_llm import format_prompt_for_chat
 
 logger = logging.getLogger(__name__)
 
