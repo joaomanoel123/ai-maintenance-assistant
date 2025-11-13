@@ -1,11 +1,11 @@
 services:
-  type: web
+  - type: web
     name: ml-pipeline-backend
     env: python
     region: oregon
     plan: free
-    rootDir: backend  # ou app (dependendo da sua estrutura)
-    branch: ml-backend
+    rootDir: .  # raiz do repositório, pois main.py está na raiz
+    branch: main  # se você usa a branch main no GitHub
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -15,8 +15,8 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: TF_CPP_MIN_LOG_LEVEL
-        value: 2
+        value: "2"
       - key: CUDA_VISIBLE_DEVICES
-        value: -1
+        value: "-1"
       - key: DATABASE_URL
-        value: postgresql://neondb_owner:npg_E5etwTVau2JK@ep-rough-forest-aeg674mp-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require # ORIGENAL
+        value: "postgresql://neondb_owner:npg_E5etwTVau2JK@ep-rough-forest-aeg674mp-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
