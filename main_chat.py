@@ -29,6 +29,8 @@ from pydantic import BaseModel
 from model_loader import load_models, MODELS, model_predict
 from embeddings import VectorMemory
 from db import save_experience_record, init_database
+from utils.shared import extract_prediction_intent
+from llm_huggingface import generate_response_stream
 
 # Setup logging
 logging.basicConfig(
