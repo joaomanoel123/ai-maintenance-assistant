@@ -1,379 +1,505 @@
 """
 ===============================================================================
-HUGGING FACE LLM - Integração com Modelos Hugging Face
+MAIN CHAT API - Pipeline AGI v2.0 com Memória Vetorial + HuggingFace
 ===============================================================================
 
-Implementa integração com modelos do Hugging Face:
-- Modelos de texto (GPT-2, Llama, Mistral, etc)
-- Streaming de tokens
-- Inferência local ou via API
+Backend completo com:
+- WebSocket para chat streaming
+- Memória vetorial (ChromaDB)
+- Modelos preditivos integrados
+- HuggingFace LLM com streaming token por token
+- Persistência no Neon PostgreSQL
 
 Autor: João Manoel
+Deploy: Render.com
 ===============================================================================
 """
 
 import os
 import logging
-from typing import AsyncGenerator, Optional, Dict
-import asyncio
+from datetime import datetime
+from typing import Optional, Dict, Any
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Imports dos módulos customizados
+from model_loader import load_models, MODELS, model_predict
+from embeddings import VectorMemory
+from chat_pipeline import respond_stream_generator, extract_prediction_intent
+from db import save_experience_record, init_database
+from llm_huggingface import create_llm, HuggingFaceConfig
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # ============================================
-# CONFIGURAÇÃO
+# INICIALIZAR APP
 # ============================================
 
-class HuggingFaceConfig:
-    """Configuração de modelos Hugging Face"""
-    
-    # Modelos recomendados (do menor ao maior)
-    MODELS = {
-        # Modelos pequenos (rodam local em CPU)
-        "gpt2": "gpt2",                                    # 124M params
-        "gpt2-medium": "gpt2-medium",                      # 355M params
-        "distilgpt2": "distilgpt2",                        # 82M params (mais rápido)
-        
-        # Modelos médios (necessitam GPU ou API)
-        "flan-t5-base": "google/flan-t5-base",            # 250M params (bom para QA)
-        "flan-t5-large": "google/flan-t5-large",          # 780M params
-        
-        # Modelos grandes (usar via Inference API)
-        "mistral-7b": "mistralai/Mistral-7B-Instruct-v0.2",  # 7B params
-        "llama-7b": "meta-llama/Llama-2-7b-chat-hf",         # 7B params (requer aprovação)
-        "zephyr-7b": "HuggingFaceH4/zephyr-7b-beta",         # 7B params (aberto)
-    }
-    
-    # Configuração padrão
-    DEFAULT_MODEL = os.getenv("HF_MODEL", "gpt2")  # Pequeno para começar
-    USE_API = os.getenv("HF_USE_API", "false").lower() == "true"
-    API_TOKEN = os.getenv("HF_API_TOKEN", None)
-    
-    # Parâmetros de geração
-    MAX_LENGTH = int(os.getenv("HF_MAX_LENGTH", "200"))
-    TEMPERATURE = float(os.getenv("HF_TEMPERATURE", "0.7"))
-    TOP_P = float(os.getenv("HF_TOP_P", "0.9"))
-    TOP_K = int(os.getenv("HF_TOP_K", "50"))
+app = FastAPI(
+    title="AGI Chat + Predictive API",
+    version="2.1",
+    description="Sistema AGI com chat responsivo, memória vetorial e HuggingFace LLM"
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Componentes globais
+memory: Optional[VectorMemory] = None
+llm_client = None
 
 # ============================================
-# MODO 1: INFERÊNCIA LOCAL
+# MODELS
 # ============================================
 
-class LocalHuggingFaceLLM:
-    """
-    LLM local usando transformers
-    """
-    
-    def __init__(self, model_name: str = HuggingFaceConfig.DEFAULT_MODEL):
-        self.model_name = model_name
-        self.model = None
-        self.tokenizer = None
-        self.device = "cpu"  # Pode ser "cuda" se tiver GPU
-        
-    def load(self):
-        """Carregar modelo e tokenizer"""
-        try:
-            from transformers import AutoTokenizer, AutoModelForCausalLM
-            import torch
-            
-            logger.info(f"🔄 Carregando modelo local: {self.model_name}")
-            
-            # Verificar GPU
-            if torch.cuda.is_available():
-                self.device = "cuda"
-                logger.info("✅ GPU detectada, usando CUDA")
-            else:
-                logger.info("⚠️ GPU não disponível, usando CPU")
-            
-            # Carregar tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            
-            # Carregar modelo
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                torch_dtype="auto",
-                device_map="auto" if self.device == "cuda" else None
-            )
-            
-            if self.device == "cpu":
-                self.model = self.model.to(self.device)
-            
-            # Configurar pad token se não existir
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-            
-            logger.info(f"✅ Modelo {self.model_name} carregado no {self.device}")
-            return True
-            
-        except ImportError:
-            logger.error("❌ transformers ou torch não instalado!")
-            logger.error("Instale com: pip install transformers torch")
-            return False
-        except Exception as e:
-            logger.error(f"❌ Erro ao carregar modelo: {e}")
-            return False
-    
-    async def generate_stream(
-        self, 
-        prompt: str,
-        max_length: int = HuggingFaceConfig.MAX_LENGTH,
-        temperature: float = HuggingFaceConfig.TEMPERATURE,
-        top_p: float = HuggingFaceConfig.TOP_P,
-        top_k: int = HuggingFaceConfig.TOP_K
-    ) -> AsyncGenerator[str, None]:
-        """
-        Gerar resposta com streaming
-        """
-        if not self.model or not self.tokenizer:
-            yield "Erro: Modelo não carregado"
-            return
-        
-        try:
-            # Tokenizar input
-            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-            
-            # Gerar
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=max_length,
-                    temperature=temperature,
-                    top_p=top_p,
-                    top_k=top_k,
-                    do_sample=True,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    num_return_sequences=1
-                )
-            
-            # Decodificar
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Remover prompt da resposta
-            response = generated_text[len(prompt):].strip()
-            
-            # Simular streaming (quebrar em palavras)
-            words = response.split()
-            for word in words:
-                yield word + " "
-                await asyncio.sleep(0.05)  # Simular latência
-        
-        except Exception as e:
-            logger.error(f"❌ Erro na geração: {e}")
-            yield f"Erro ao gerar resposta: {str(e)}"
+class PredictRequest(BaseModel):
+    type: str  # 'cmapss' ou 'ai4i'
+    features: list
+
+class ChatMessage(BaseModel):
+    message: str
+    user_id: str = "anonymous"
 
 # ============================================
-# MODO 2: INFERENCE API (RECOMENDADO)
+# STARTUP
 # ============================================
 
-class HuggingFaceInferenceAPI:
-    """
-    LLM via Hugging Face Inference API (gratuito com rate limit)
-    """
+@app.on_event("startup")
+async def startup_event():
+    """Inicializar modelos, memória vetorial e LLM"""
+    logger.info("🚀 Iniciando AGI Chat API...")
     
-    def __init__(
-        self, 
-        model_name: str = HuggingFaceConfig.DEFAULT_MODEL,
-        api_token: Optional[str] = None
-    ):
-        self.model_name = model_name
-        self.api_token = api_token or HuggingFaceConfig.API_TOKEN
-        self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
+    try:
+        # 1. Carregar modelos preditivos
+        logger.info("📦 Carregando modelos preditivos...")
+        load_models()
+        logger.info(f"✅ Modelos carregados: {list(MODELS.keys())}")
         
-        if not self.api_token:
-            logger.warning("⚠️ HF_API_TOKEN não configurado, usando modo público (rate limit)")
-    
-    async def generate_stream(
-        self,
-        prompt: str,
-        max_length: int = HuggingFaceConfig.MAX_LENGTH,
-        temperature: float = HuggingFaceConfig.TEMPERATURE,
-        top_p: float = HuggingFaceConfig.TOP_P
-    ) -> AsyncGenerator[str, None]:
-        """
-        Gerar resposta usando Inference API
-        """
-        try:
-            import httpx
-            
-            headers = {}
-            if self.api_token:
-                headers["Authorization"] = f"Bearer {self.api_token}"
-            
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_length": max_length,
-                    "temperature": temperature,
-                    "top_p": top_p,
-                    "return_full_text": False
-                },
-                "options": {
-                    "wait_for_model": True
-                }
-            }
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    self.api_url,
-                    headers=headers,
-                    json=payload
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    
-                    # Extrair texto gerado
-                    if isinstance(result, list) and len(result) > 0:
-                        generated_text = result[0].get("generated_text", "")
-                    elif isinstance(result, dict):
-                        generated_text = result.get("generated_text", "")
-                    else:
-                        generated_text = str(result)
-                    
-                    # Simular streaming
-                    words = generated_text.split()
-                    for word in words:
-                        yield word + " "
-                        await asyncio.sleep(0.05)
-                
-                elif response.status_code == 503:
-                    yield "Modelo está carregando, tente novamente em alguns segundos..."
-                    logger.warning("⚠️ Modelo ainda carregando")
-                
-                else:
-                    error_msg = f"Erro API: {response.status_code}"
-                    logger.error(f"❌ {error_msg}: {response.text}")
-                    yield error_msg
+        # 2. Inicializar banco de dados
+        logger.info("🗄️ Inicializando banco de dados...")
+        await init_database()
+        logger.info("✅ Database pronto")
         
-        except ImportError:
-            yield "Erro: httpx não instalado. Execute: pip install httpx"
-        except Exception as e:
-            logger.error(f"❌ Erro na API: {e}")
-            yield f"Erro: {str(e)}"
-
-# ============================================
-# FACTORY - CRIAR LLM
-# ============================================
-
-def create_llm(
-    model_name: Optional[str] = None,
-    use_api: Optional[bool] = None
-) -> Optional[object]:
-    """
-    Factory para criar instância de LLM
-    
-    Args:
-        model_name: Nome do modelo (padrão: config)
-        use_api: Usar API ou local (padrão: config)
-    
-    Returns:
-        Instância de LLM ou None
-    """
-    model_name = model_name or HuggingFaceConfig.DEFAULT_MODEL
-    use_api = use_api if use_api is not None else HuggingFaceConfig.USE_API
-    
-    logger.info(f"🤗 Criando LLM: {model_name} (API: {use_api})")
-    
-    if use_api:
-        # Usar Inference API
-        llm = HuggingFaceInferenceAPI(model_name)
-        logger.info("✅ LLM criado (Inference API)")
-        return llm
-    else:
-        # Usar modelo local
-        llm = LocalHuggingFaceLLM(model_name)
-        if llm.load():
-            logger.info("✅ LLM criado (Local)")
-            return llm
+        # 3. Inicializar memória vetorial
+        logger.info("🧠 Inicializando memória vetorial...")
+        global memory
+        memory = VectorMemory(collection_name="agi_memory")
+        await memory.start()
+        logger.info("✅ Memória vetorial inicializada")
+        
+        # 4. Inicializar LLM HuggingFace
+        logger.info("🤗 Inicializando HuggingFace LLM...")
+        global llm_client
+        
+        model_name = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
+        use_api = os.getenv("HF_USE_API", "true").lower() == "true"
+        
+        llm_client = create_llm(model_name=model_name, use_api=use_api)
+        
+        if llm_client:
+            logger.info(f"✅ LLM inicializado: {model_name} (API: {use_api})")
         else:
-            logger.error("❌ Falha ao carregar modelo local")
-            return None
+            logger.error("❌ Falha ao inicializar LLM")
+            raise Exception("LLM não inicializado")
+        
+        # 5. Verificar se precisa ingestão inicial
+        doc_count = memory.get_collection_size()
+        if doc_count == 0:
+            logger.info("📚 Memória vazia, executando ingestão inicial...")
+            await run_initial_ingestion()
+        else:
+            logger.info(f"✅ Memória já possui {doc_count} documentos")
+        
+        logger.info("🎉 Startup concluído com sucesso!")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro no startup: {e}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup"""
+    logger.info("👋 Encerrando AGI Chat API...")
+    if memory:
+        await memory.close()
 
 # ============================================
-# HELPER - FORMATAR PROMPT
+# ENDPOINTS REST
 # ============================================
 
-def format_prompt_for_model(
-    model_name: str,
-    system_prompt: str,
-    user_message: str,
-    context: Optional[str] = None
-) -> str:
+@app.get("/")
+def read_root():
+    """Endpoint raiz"""
+    return {
+        "status": "ok",
+        "message": "AGI Chat + Predictive API com HuggingFace",
+        "version": "2.1",
+        "llm_model": os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2"),
+        "endpoints": {
+            "predict": "/predict",
+            "ask": "/ask",
+            "chat_ws": "/ws-chat",
+            "health": "/health",
+            "memory_stats": "/memory/stats"
+        }
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check"""
+    models_status = {k: v is not None for k, v in MODELS.items()}
+    memory_status = memory is not None and memory.collection is not None
+    llm_status = llm_client is not None
+    
+    return {
+        "status": "healthy",
+        "models": models_status,
+        "memory": memory_status,
+        "llm": llm_status,
+        "llm_model": os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2"),
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.post("/ask")
+async def ask_endpoint(data: ChatMessage):
     """
-    Formatar prompt conforme o modelo
-    
-    Diferentes modelos têm formatos diferentes:
-    - GPT-2: texto simples
-    - Llama-2: [INST] ... [/INST]
-    - Mistral/Zephyr: <|system|> ... <|user|> ...
+    Endpoint REST para perguntas (sem streaming)
+    Usa o pipeline completo do chat_pipeline.py
     """
+    if not memory:
+        raise HTTPException(status_code=503, detail="Memória não inicializada")
     
-    # GPT-2 e modelos simples
-    if "gpt2" in model_name.lower():
-        prompt = f"{system_prompt}\n\n"
-        if context:
-            prompt += f"Context: {context}\n\n"
-        prompt += f"User: {user_message}\nAssistant:"
-        return prompt
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM não inicializado")
     
-    # Llama-2 Chat
-    elif "llama" in model_name.lower() and "chat" in model_name.lower():
-        prompt = f"<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n"
-        if context:
-            prompt += f"{context}\n\n"
-        prompt += f"{user_message} [/INST]"
-        return prompt
+    try:
+        logger.info(f"📥 /ask recebido de {data.user_id}: {data.message[:50]}...")
+        
+        # Usar o pipeline completo
+        full_answer = ""
+        async for chunk in respond_stream_generator(
+            user_message=data.message,
+            user_id=data.user_id,
+            memory=memory,
+            models=MODELS,
+            llm_client=llm_client
+        ):
+            full_answer += chunk
+        
+        return {
+            "question": data.message,
+            "answer": full_answer.strip(),
+            "timestamp": datetime.now().isoformat()
+        }
     
-    # Mistral/Zephyr
-    elif "mistral" in model_name.lower() or "zephyr" in model_name.lower():
-        prompt = f"<|system|>\n{system_prompt}</s>\n"
-        if context:
-            prompt += f"<|assistant|>\n{context}</s>\n"
-        prompt += f"<|user|>\n{user_message}</s>\n<|assistant|>"
-        return prompt
+    except Exception as e:
+        logger.error(f"Erro no endpoint /ask: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict")
+async def predict(payload: PredictRequest):
+    """
+    Endpoint de predição (REST)
+    """
+    model_key = payload.type
     
-    # FLAN-T5 (diferente - encoder-decoder)
-    elif "flan" in model_name.lower():
-        prompt = f"{system_prompt}\n\n"
-        if context:
-            prompt += f"Context: {context}\n\n"
-        prompt += f"Question: {user_message}\nAnswer:"
-        return prompt
+    if model_key not in MODELS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Modelo '{model_key}' não disponível. Opções: {list(MODELS.keys())}"
+        )
     
-    # Fallback genérico
-    else:
-        prompt = f"{system_prompt}\n\n"
-        if context:
-            prompt += f"Context: {context}\n\n"
-        prompt += f"User: {user_message}\nAssistant:"
-        return prompt
+    model = MODELS[model_key]
+    if model is None:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Modelo '{model_key}' não carregado"
+        )
+    
+    try:
+        prediction = model_predict(model_key, payload.features)
+        
+        return {
+            "model": model_key,
+            "prediction": prediction,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Erro na predição: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/memory/stats")
+async def get_memory_stats():
+    """Estatísticas da memória vetorial"""
+    if not memory:
+        raise HTTPException(status_code=503, detail="Memória não inicializada")
+    
+    return {
+        "collection_name": memory.collection_name,
+        "total_documents": memory.get_collection_size(),
+        "embedding_model": "all-MiniLM-L6-v2",
+        "status": "active"
+    }
+
+@app.post("/memory/add")
+async def add_to_memory(data: Dict[str, Any]):
+    """Adicionar documento à memória"""
+    if not memory:
+        raise HTTPException(status_code=503, detail="Memória não inicializada")
+    
+    try:
+        doc_id = data.get("id", f"doc_{datetime.now().timestamp()}")
+        document = data.get("document")
+        metadata = data.get("metadata", {})
+        
+        if not document:
+            raise HTTPException(status_code=400, detail="Campo 'document' obrigatório")
+        
+        memory.add_documents(
+            ids=[doc_id],
+            documents=[document],
+            metadatas=[metadata]
+        )
+        
+        return {
+            "status": "success",
+            "id": doc_id,
+            "message": "Documento adicionado à memória"
+        }
+    
+    except Exception as e:
+        logger.error(f"Erro ao adicionar à memória: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/llm/info")
+async def get_llm_info():
+    """Informações sobre o LLM configurado"""
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM não inicializado")
+    
+    return {
+        "model": os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2"),
+        "use_api": os.getenv("HF_USE_API", "true").lower() == "true",
+        "max_length": HuggingFaceConfig.MAX_LENGTH,
+        "temperature": HuggingFaceConfig.TEMPERATURE,
+        "top_p": HuggingFaceConfig.TOP_P,
+        "available_models": list(HuggingFaceConfig.MODELS.keys())
+    }
 
 # ============================================
-# TESTE
+# WEBSOCKET CHAT
 # ============================================
 
-async def test_llm():
-    """Função de teste"""
-    print("="*80)
-    print("🧪 TESTANDO HUGGING FACE LLM")
-    print("="*80)
+@app.websocket("/ws-chat")
+async def websocket_chat(websocket: WebSocket):
+    """
+    WebSocket para chat com streaming
+    Usa o chat_pipeline.py completo
+    """
+    await websocket.accept()
+    logger.info("✅ Cliente conectado ao chat")
     
-    # Criar LLM (API por padrão)
-    llm = create_llm(model_name="gpt2", use_api=True)
+    try:
+        while True:
+            # Receber mensagem
+            data = await websocket.receive_json()
+            user_message = data.get("message", "")
+            user_id = data.get("user_id", "anonymous")
+            
+            if not user_message:
+                await websocket.send_json({
+                    "type": "error",
+                    "data": "Mensagem vazia"
+                })
+                continue
+            
+            logger.info(f"📥 Mensagem recebida de {user_id}: {user_message[:50]}...")
+            
+            # Verificar dependências
+            if not memory:
+                await websocket.send_json({
+                    "type": "error",
+                    "data": "Memória não disponível"
+                })
+                continue
+            
+            if not llm_client:
+                await websocket.send_json({
+                    "type": "error",
+                    "data": "LLM não disponível"
+                })
+                continue
+            
+            # Usar pipeline completo com streaming
+            try:
+                async for chunk in respond_stream_generator(
+                    user_message=user_message,
+                    user_id=user_id,
+                    memory=memory,
+                    models=MODELS,
+                    llm_client=llm_client
+                ):
+                    await websocket.send_json({
+                        "type": "token",
+                        "data": chunk
+                    })
+                
+                # Sinal de fim
+                await websocket.send_json({
+                    "type": "end",
+                    "data": "done"
+                })
+                
+                logger.info(f"✅ Resposta enviada para {user_id}")
+            
+            except Exception as e:
+                logger.error(f"Erro ao gerar resposta: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "data": f"Erro ao processar: {str(e)}"
+                })
     
-    if not llm:
-        print("❌ Falha ao criar LLM")
-        return
+    except WebSocketDisconnect:
+        logger.info("👋 Cliente desconectado")
     
-    # Testar geração
-    prompt = "Explain what is machine learning in simple terms:"
-    print(f"\n📝 Prompt: {prompt}\n")
-    print("🤖 Resposta: ", end="", flush=True)
+    except Exception as e:
+        logger.error(f"❌ Erro no WebSocket: {e}")
+
+# ============================================
+# INGESTÃO INICIAL
+# ============================================
+
+async def run_initial_ingestion():
+    """
+    Ingestão inicial de conhecimento base
+    """
+    logger.info("📚 Executando ingestão inicial...")
     
-    async for token in llm.generate_stream(prompt, max_length=100):
-        print(token, end="", flush=True)
+    # Conhecimento base sobre o sistema
+    base_knowledge = [
+        {
+            "id": "system_intro",
+            "document": "Sistema AGI Generativa v2.0 com capacidades de predição (CMAPSS e AI4I), raciocínio cognitivo, tomada de decisão e aprendizado por feedback (RLHF). Usa modelos HuggingFace para geração de respostas.",
+            "metadata": {"category": "system", "priority": "high"}
+        },
+        {
+            "id": "cmapss_info",
+            "document": "CMAPSS é o modelo de predição de RUL (Remaining Useful Life) que estima a vida útil restante de motores turbofan usando dados de 21 sensores ao longo do tempo.",
+            "metadata": {"category": "models", "type": "cmapss"}
+        },
+        {
+            "id": "ai4i_info",
+            "document": "AI4I é o modelo de predição de falhas em máquinas industriais que analisa temperatura, rotação, torque e desgaste para prever probabilidade de falha.",
+            "metadata": {"category": "models", "type": "ai4i"}
+        },
+        {
+            "id": "rul_definition",
+            "document": "RUL (Remaining Useful Life) é a estimativa de quanto tempo ou ciclos operacionais restam antes de uma manutenção ser necessária.",
+            "metadata": {"category": "concepts", "term": "rul"}
+        },
+        {
+            "id": "prediction_process",
+            "document": "O processo de predição envolve: 1) Coleta de dados dos sensores, 2) Normalização, 3) Predição usando modelo CNN-RNN ou Random Forest, 4) Análise de raciocínio, 5) Recomendação de ação.",
+            "metadata": {"category": "process"}
+        },
+        {
+            "id": "rlhf_info",
+            "document": "RLHF (Reinforcement Learning from Human Feedback) é o mecanismo de aprendizado contínuo onde o sistema melhora suas respostas baseado no feedback dos usuários.",
+            "metadata": {"category": "features", "type": "rlhf"}
+        },
+        {
+            "id": "modules_info",
+            "document": "Os módulos AGI incluem: Memória (curto e longo prazo), Raciocínio (causal, temporal, indutivo), Decisão (orientada a metas), Geração (explicações textuais) e Metacognição.",
+            "metadata": {"category": "architecture"}
+        },
+        {
+            "id": "huggingface_info",
+            "document": "O sistema usa modelos HuggingFace para geração de linguagem natural. Suporta diversos modelos como Mistral, Llama, GPT-2, entre outros. Pode operar via API ou localmente.",
+            "metadata": {"category": "llm", "priority": "medium"}
+        }
+    ]
     
-    print("\n\n✅ Teste concluído!")
+    ids = [item["id"] for item in base_knowledge]
+    documents = [item["document"] for item in base_knowledge]
+    metadatas = [item["metadata"] for item in base_knowledge]
+    
+    memory.add_documents(ids=ids, documents=documents, metadatas=metadatas)
+    
+    logger.info(f"✅ Ingestão concluída: {len(base_knowledge)} documentos adicionados")
+
+# ============================================
+# INGESTÃO DE DATASETS KAGGLE (OPCIONAL)
+# ============================================
+
+@app.post("/ingest/kaggle")
+async def ingest_kaggle_datasets():
+    """
+    Endpoint para ingerir datasets do Kaggle
+    (Executar manualmente ou via cron job)
+    """
+    if not memory:
+        raise HTTPException(status_code=503, detail="Memória não inicializada")
+    
+    try:
+        from ingest_datasets import ingest_ai4i_sample, ingest_cmapss_sample
+        
+        logger.info("📊 Iniciando ingestão de datasets Kaggle...")
+        
+        # Ingerir AI4I
+        await ingest_ai4i_sample(memory)
+        
+        # Ingerir CMAPSS
+        await ingest_cmapss_sample(memory)
+        
+        total_docs = memory.get_collection_size()
+        
+        return {
+            "status": "success",
+            "message": "Datasets ingeridos com sucesso",
+            "total_documents": total_docs
+        }
+    
+    except Exception as e:
+        logger.error(f"Erro na ingestão: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# EXECUÇÃO
+# ============================================
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(test_llm())
+    import uvicorn
+    
+    port = int(os.getenv("PORT", 8000))
+    
+    logger.info("="*80)
+    logger.info("🚀 AGI CHAT API v2.1 + HUGGINGFACE")
+    logger.info("="*80)
+    logger.info(f"📡 Porta: {port}")
+    logger.info(f"🤗 Modelo: {os.getenv('HF_MODEL', 'mistralai/Mistral-7B-Instruct-v0.2')}")
+    logger.info(f"🔗 WebSocket: ws://localhost:{port}/ws-chat")
+    logger.info(f"📝 REST Ask: http://localhost:{port}/ask")
+    logger.info(f"📚 Docs: http://localhost:{port}/docs")
+    logger.info("="*80)
+    
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        log_level="info"
+    )
