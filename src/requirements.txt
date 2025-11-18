@@ -32,11 +32,11 @@ aiofiles==23.2.1
 httpx==0.25.2
 
 # Opcional (para LLMs locais)
-huggingface_hub==0.25.0
+#huggingface_hub==0.25.0
 
 
 # Opcional (para LLMs locais)
-transformers==4.35.2
+#transformers==4.35.2
 # torch==2.1.1
 
 # Development
