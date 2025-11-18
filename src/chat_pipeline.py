@@ -1,183 +1,332 @@
 """
 ===============================================================================
-CHAT PIPELINE - Lógica de Chat com Streaming (Hugging Face)
+CHAT PIPELINE - Pipeline de Processamento de Chat
 ===============================================================================
 
-Implementa:
-- Recuperação de contexto da memória vetorial
-- Detecção de intenção de predição
-- Geração com Hugging Face (local ou API)
-- Persistência de experiências
+Pipeline completo para processamento de mensagens:
+1. Busca contexto na memória vetorial
+2. Detecta intenção (predição ou chat)
+3. Executa predição se necessário
+4. Gera resposta via LLM com streaming
+5. Salva experiência no banco
 
 Autor: João Manoel
 ===============================================================================
 """
 
-import asyncio
 import logging
-import re
-from typing import AsyncGenerator, Dict, Optional, Any
+from typing import AsyncGenerator, Optional, Dict, Any
 from datetime import datetime
-
-from embeddings import VectorMemory
-from model_loader import model_predict
-from db import save_experience_record
-from llm_huggingface import generate_response_stream
-from utils_llm import format_prompt_for_chat
 
 logger = logging.getLogger(__name__)
 
 # ============================================
-# DETECÇÃO DE INTENÇÃO
+# IMPORTS LOCAIS
 # ============================================
 
-def extract_prediction_intent(message: str) -> Optional[Dict[str, Any]]:
-    """
-    Detectar se usuário quer fazer uma predição
+try:
+    from utils_llm import (
+        auto_format_prompt,
+        build_context_from_memory,
+        clean_llm_response,
+        validate_llm_response,
+        truncate_context
+    )
+    from shared import (
+        extract_prediction_intent,
+        detect_model_type,
+        extract_sensor_data,
+        validate_message,
+        format_prediction_response,
+        log_user_interaction,
+        log_prediction
+    )
+    from db import save_experience_record
+except ImportError as e:
+    logger.warning(f"Alguns módulos opcionais não encontrados: {e}")
+    # Fallbacks caso os módulos não existam
+    def auto_format_prompt(model_name, system_prompt, user_message, context=None):
+        return f"{system_prompt}\n\n{context or ''}\n\nUser: {user_message}\nAssistant:"
     
-    Returns:
-        Dict com tipo e dados se detectado, None caso contrário
-    """
-    message_lower = message.lower()
+    def build_context_from_memory(results):
+        if not results or not results.get("documents"):
+            return ""
+        docs = results.get("documents", [[]])[0]
+        return "\n\n".join(docs[:5])
     
-    # Palavras-chave para RUL
-    rul_keywords = ['rul', 'vida útil', 'vida util', 'quanto tempo', 'ciclos', 'cmapss']
+    def clean_llm_response(text):
+        return text.strip()
     
-    # Palavras-chave para Falha
-    failure_keywords = ['falha', 'failure', 'quebra', 'defeito', 'ai4i', 'probabilidade']
+    def validate_llm_response(text, min_length=10):
+        return len(text.strip()) >= min_length
     
-    # Verificar RUL
-    if any(kw in message_lower for kw in rul_keywords):
-        return {"type": "rul", "model": "cmapss"}
+    def truncate_context(text, max_tokens=2000, tokens_per_word=1.3):
+        words = text.split()
+        max_words = int(max_tokens / tokens_per_word)
+        if len(words) <= max_words:
+            return text
+        return " ".join(words[:max_words]) + "\n[... truncado ...]"
     
-    # Verificar Falha
-    if any(kw in message_lower for kw in failure_keywords):
-        return {"type": "failure", "model": "ai4i"}
+    def extract_prediction_intent(message):
+        msg_lower = message.lower()
+        if "rul" in msg_lower or "vida útil" in msg_lower:
+            return "rul"
+        if "falha" in msg_lower or "failure" in msg_lower:
+            return "failure"
+        if "prever" in msg_lower or "predição" in msg_lower:
+            return "predict"
+        return "chat"
     
-    return None
+    def detect_model_type(message):
+        msg_lower = message.lower()
+        if "cmapss" in msg_lower or "turbofan" in msg_lower:
+            return "cmapss"
+        if "ai4i" in msg_lower or "industrial" in msg_lower:
+            return "ai4i"
+        return None
+    
+    def extract_sensor_data(message):
+        import re
+        pattern = r'-?\d+\.?\d*'
+        matches = re.findall(pattern, message)
+        return [float(m) for m in matches] if matches else None
+    
+    def validate_message(message, min_length=3, max_length=2000):
+        return message and isinstance(message, str) and min_length <= len(message.strip()) <= max_length
+    
+    def format_prediction_response(prediction, model_type, confidence=None):
+        return f"Predição ({model_type}): {prediction}"
+    
+    def log_user_interaction(user_id, message, intent, response_length=0):
+        logger.info(f"USER: {user_id} | INTENT: {intent} | MSG_LEN: {len(message)}")
+    
+    def log_prediction(user_id, model_type, prediction, features_count):
+        logger.info(f"PREDICTION: {user_id} | MODEL: {model_type} | RESULT: {prediction}")
+    
+    async def save_experience_record(*args, **kwargs):
+        logger.info("Experiência registrada (fallback)")
 
 # ============================================
-# CONSTRUÇÃO DE PROMPT
+# SISTEMA PROMPT
 # ============================================
 
-def build_llm_prompt(
+BASE_SYSTEM_PROMPT = """Você é uma AGI (Inteligência Artificial Geral) especializada em manutenção preditiva industrial.
+
+CAPACIDADES:
+- Predição de RUL (Remaining Useful Life) usando modelo CMAPSS
+- Predição de falhas industriais usando modelo AI4I
+- Análise de dados de sensores em tempo real
+- Raciocínio causal e temporal sobre equipamentos
+- Recomendações técnicas de manutenção
+
+PERSONALIDADE:
+- Técnico mas acessível
+- Direto e objetivo
+- Proativo em sugerir ações preventivas
+- Honesto sobre limitações
+
+FORMATO DE RESPOSTA:
+- Use markdown para estruturar
+- Inclua emojis técnicos quando apropriado (🔧⚠️📊✅)
+- Seja conciso mas completo
+- Sempre explique o raciocínio por trás de predições"""
+
+# ============================================
+# EXTRAÇÃO DE INTENÇÃO DE PREDIÇÃO
+# ============================================
+
+def extract_prediction_intent_detailed(
     user_message: str,
-    contexts: list,
-    prediction_info: Optional[Dict] = None
-) -> str:
+    models: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
     """
-    Construir prompt para Hugging Face
+    Detecta se a mensagem pede uma predição e extrai detalhes
     
     Args:
         user_message: Mensagem do usuário
-        contexts: Contextos recuperados da memória
-        prediction_info: Informações de predição (opcional)
+        models: Dicionário de modelos disponíveis
     
     Returns:
-        Prompt formatado
+        Dicionário com detalhes da predição ou None
     """
-    # System prompt
-    system_prompt = """Você é um assistente especializado em AGI (Inteligência Artificial Geral) e manutenção preditiva.
-Seu papel é ajudar usuários a entender conceitos de RUL (Remaining Useful Life), predição de falhas, 
-e análise de dados de sensores industriais. Seja claro, técnico quando necessário, mas acessível."""
+    intent = extract_prediction_intent(user_message)
     
-    # Contexto da memória
-    context_text = ""
-    if contexts:
-        context_text = "Informações relevantes:\n"
-        for i, ctx in enumerate(contexts[:3], 1):
-            context_text += f"{i}. {ctx}\n"
+    if intent not in ["predict", "rul", "failure"]:
+        return None
     
-    # Informação de predição
-    if prediction_info:
-        context_text += f"\nPredição realizada:\n{prediction_info}\n"
+    # Detectar tipo de modelo
+    model_type = detect_model_type(user_message)
     
-    # Formatar prompt
-    prompt = format_prompt_for_chat(
-        system_prompt=system_prompt,
-        user_message=user_message,
-        context=context_text if context_text else None
-    )
+    # Tentar extrair dados de sensores
+    sensor_data = extract_sensor_data(user_message)
     
-    return prompt
+    # Verificar se o modelo está disponível
+    if model_type and model_type not in models:
+        return {
+            "intent": intent,
+            "model_type": model_type,
+            "available": False,
+            "error": f"Modelo '{model_type}' não disponível"
+        }
+    
+    return {
+        "intent": intent,
+        "model_type": model_type,
+        "sensor_data": sensor_data,
+        "available": model_type in models if model_type else False
+    }
 
 # ============================================
-# GERAÇÃO DE RESPOSTA COM HUGGING FACE
+# EXECUÇÃO DE PREDIÇÃO
+# ============================================
+
+async def execute_prediction(
+    prediction_info: Dict[str, Any],
+    models: Dict[str, Any],
+    user_id: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Executa predição com base nas informações extraídas
+    
+    Args:
+        prediction_info: Informações da predição
+        models: Modelos disponíveis
+        user_id: ID do usuário
+    
+    Returns:
+        Resultado da predição ou None
+    """
+    if not prediction_info or not prediction_info.get("available"):
+        return None
+    
+    model_type = prediction_info.get("model_type")
+    sensor_data = prediction_info.get("sensor_data")
+    
+    if not model_type or not sensor_data:
+        logger.warning("Dados insuficientes para predição")
+        return None
+    
+    try:
+        from model_loader import model_predict
+        
+        # Executar predição
+        result = model_predict(model_type, sensor_data)
+        
+        # Log
+        log_prediction(user_id, model_type, result, len(sensor_data))
+        
+        return {
+            "model_type": model_type,
+            "prediction": result,
+            "sensor_data": sensor_data,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Erro ao executar predição: {e}")
+        return None
+
+# ============================================
+# GERADOR DE RESPOSTA COM STREAMING
 # ============================================
 
 async def respond_stream_generator(
     user_message: str,
     user_id: str,
-    memory: VectorMemory,
-    models: Dict
+    memory,
+    models: Dict[str, Any],
+    llm_client=None
 ) -> AsyncGenerator[str, None]:
     """
-    Gerar resposta usando Hugging Face com streaming
+    Pipeline completo de geração de resposta com streaming
+    
+    Args:
+        user_message: Mensagem do usuário
+        user_id: ID do usuário
+        memory: Instância de VectorMemory
+        models: Dicionário de modelos preditivos
+        llm_client: Cliente LLM (HuggingFace)
     
     Yields:
-        Chunks da resposta
+        Tokens da resposta
     """
-    try:
-        logger.info(f"🤖 Processando mensagem: {user_message[:50]}...")
-        
-        # 1. RECUPERAR CONTEXTO DA MEMÓRIA
-        results = memory.query(user_message, n_results=5)
-        contexts = results['documents'][0] if results and results['documents'] else []
-        
-        logger.info(f"📚 Contextos recuperados: {len(contexts)}")
-        
-        # 2. DETECTAR INTENÇÃO DE PREDIÇÃO
-        prediction_intent = extract_prediction_intent(user_message)
-        prediction_info = None
-        
-        if prediction_intent and models.get(prediction_intent['model']):
-            logger.info(f"🎯 Intenção de predição detectada: {prediction_intent['type']}")
-            
-            # Fazer predição
-            try:
-                if prediction_intent['model'] == 'cmapss':
-                    features = [520.0] * 21
-                    pred_result = model_predict('cmapss', features)
-                    rul_value = pred_result.get('rul', 'N/A')
-                    prediction_info = f"RUL estimado: {rul_value} ciclos"
-                
-                elif prediction_intent['model'] == 'ai4i':
-                    features = [1, 300, 310, 1500, 40, 100]
-                    pred_result = model_predict('ai4i', features)
-                    prob = pred_result.get('probability', 0)
-                    prediction_info = f"Probabilidade de falha: {prob*100:.1f}%"
-                
-                logger.info(f"✅ Predição: {prediction_info}")
-            
-            except Exception as e:
-                logger.error(f"❌ Erro na predição: {e}")
-                prediction_info = "Erro ao realizar predição"
-        
-        # 3. CONSTRUIR PROMPT PARA LLM
-        prompt = build_llm_prompt(user_message, contexts, prediction_info)
-        
-        logger.info("🤗 Gerando resposta com Hugging Face...")
-        
-        # 4. GERAR RESPOSTA COM STREAMING
-        full_response = ""
-        
-        async for chunk in generate_response_stream(prompt, max_length=512):
-            full_response += chunk
-            yield chunk
-        
-        # 5. SALVAR EXPERIÊNCIA
-        try:
-            await save_experience_record(
-                user_id=user_id,
-                user_message=user_message,
-                assistant_response=full_response,
-                contexts=contexts,
-                prediction_info=prediction_info
-            )
-            logger.info("💾 Experiência salva")
-        except Exception as e:
-            logger.error(f"❌ Erro ao salvar experiência: {e}")
     
-    except Exception as e:
-        logger.error(f"❌ Erro na geração de resposta: {e}")
-        yield f"Desculpe, ocorreu um erro: {str(e)}"
+    # 1. Validar mensagem
+    if not validate_message(user_message):
+        yield "❌ Por favor, envie uma mensagem válida."
+        return
+    
+    logger.info(f"📥 Pipeline iniciado: {user_message[:50]}...")
+    
+    try:
+        # 2. Buscar contexto na memória vetorial
+        context = ""
+        if memory and memory.collection:
+            try:
+                results = memory.query(user_message, n_results=5)
+                context = build_context_from_memory(results)
+                context = truncate_context(context, max_tokens=2000)
+                logger.info(f"📚 Contexto recuperado: {len(context)} chars")
+            except Exception as e:
+                logger.warning(f"Erro ao buscar contexto: {e}")
+        
+        # 3. Detectar intenção de predição
+        prediction_info = extract_prediction_intent_detailed(user_message, models)
+        prediction_result = None
+        
+        if prediction_info and prediction_info.get("available"):
+            logger.info(f"🎯 Predição detectada: {prediction_info.get('model_type')}")
+            prediction_result = await execute_prediction(prediction_info, models, user_id)
+            
+            if prediction_result:
+                # Adicionar resultado da predição ao contexto
+                pred_text = format_prediction_response(
+                    prediction_result.get("prediction"),
+                    prediction_result.get("model_type")
+                )
+                context = f"{pred_text}\n\n{context}"
+        
+        # 4. Construir prompt do sistema
+        system_prompt = BASE_SYSTEM_PROMPT
+        if context:
+            system_prompt += f"\n\nCONTEXTO RELEVANTE:\n{context}"
+        
+        # 5. Gerar resposta via LLM com streaming
+        if not llm_client:
+            yield "⚠️ LLM não disponível. Por favor, configure o modelo."
+            return
+        
+        # Formatar prompt
+        model_name = getattr(llm_client, 'model_name', 'gpt2')
+        prompt = auto_format_prompt(
+            model_name=model_name,
+            system_prompt=system_prompt,
+            user_message=user_message,
+            context=None  # Já incluído no system_prompt
+        )
+        
+        logger.info("🤖 Gerando resposta com LLM...")
+        
+        # Stream da resposta
+        full_response = ""
+        async for token in llm_client.generate_stream(
+            prompt=prompt,
+            max_length=800,
+            temperature=0.7,
+            top_p=0.9
+        ):
+            clean_token = token
+            full_response += clean_token
+            yield clean_token
+        
+        # 6. Limpar e validar resposta
+        full_response = clean_llm_response(full_response)
+        
+        if not validate_llm_response(full_response):
+            logger.warning("Resposta inválida gerada")
+            yield "\n\n⚠️ Desculpe, não consegui gerar uma resposta adequada."
+            return
+        
+        # 7. Salvar experiência no banco
+        try:
+            intent = prediction
