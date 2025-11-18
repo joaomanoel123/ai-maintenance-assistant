@@ -4,7 +4,6 @@ services:
     env: python
     region: oregon
     plan: free
-    rootDir: .  # raiz do repositório, pois main.py está na raiz
     branch: main  # se você usa a branch main no GitHub
     buildCommand: |
       pip install --upgrade pip
