@@ -15,7 +15,21 @@ Deploy: Render.com
 ===============================================================================
 """
 
+# FIX: Adicionar paths para imports funcionarem
+import sys
 import os
+
+# Garantir que o diretório atual está no path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# Se estiver em src/src/, adicionar parent também
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Agora fazer os imports
 import asyncio
 import logging
 from datetime import datetime
@@ -25,14 +39,17 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from fastapi import FastAPI
-from chat_pipeline import respond_stream_generator
 
 # Imports dos módulos customizados
-from model_loader import load_models, MODELS, model_predict
-from embeddings import VectorMemory
-from chat_pipeline import respond_stream_generator, extract_prediction_intent
-from db import save_experience_record, init_database
+try:
+    from model_loader import load_models, MODELS, model_predict
+    from embeddings import VectorMemory
+    from chat_pipeline import respond_stream_generator, extract_prediction_intent_detailed
+    from db import save_experience_record, init_database
+    logger_import_success = True
+except ImportError as e:
+    logger_import_success = False
+    import_error = str(e)
 
 # Setup logging
 logging.basicConfig(
@@ -40,6 +57,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Verificar imports
+if not logger_import_success:
+    logger.error(f"❌ ERRO DE IMPORT: {import_error}")
+    logger.error(f"📁 Diretório atual: {current_dir}")
+    logger.error(f"📁 Python path: {sys.path}")
+    logger.error(f"📂 Arquivos no diretório: {os.listdir(current_dir)}")
 
 # ============================================
 # INICIALIZAR APP
@@ -83,6 +107,9 @@ class ChatMessage(BaseModel):
 async def startup_event():
     """Inicializar modelos e memória vetorial"""
     logger.info("🚀 Iniciando AGI Chat API...")
+    logger.info(f"📁 Diretório de trabalho: {os.getcwd()}")
+    logger.info(f"📁 Diretório do script: {current_dir}")
+    logger.info(f"📂 Arquivos disponíveis: {os.listdir(current_dir)}")
     
     try:
         # 1. Carregar modelos preditivos
@@ -114,6 +141,8 @@ async def startup_event():
         
     except Exception as e:
         logger.error(f"❌ Erro no startup: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise
 
 @app.on_event("shutdown")
@@ -134,26 +163,52 @@ def read_root():
         "status": "ok",
         "message": "AGI Chat + Predictive API",
         "version": "2.1",
+        "working_dir": os.getcwd(),
+        "script_dir": current_dir,
+        "imports_ok": logger_import_success,
         "endpoints": {
             "predict": "/predict",
             "chat_ws": "/ws-chat",
             "health": "/health",
-            "memory_stats": "/memory/stats"
+            "memory_stats": "/memory/stats",
+            "debug": "/debug"
         }
+    }
+
+@app.get("/debug")
+def debug_info():
+    """Endpoint de debug"""
+    return {
+        "current_dir": current_dir,
+        "parent_dir": parent_dir,
+        "cwd": os.getcwd(),
+        "sys_path": sys.path[:5],  # Primeiros 5 paths
+        "files_in_dir": os.listdir(current_dir),
+        "imports_successful": logger_import_success,
+        "python_version": sys.version
     }
 
 @app.get("/health")
 async def health_check():
     """Health check"""
-    models_status = {k: v is not None for k, v in MODELS.items()}
-    memory_status = memory is not None and memory.collection is not None
-    
-    return {
-        "status": "healthy",
-        "models": models_status,
-        "memory": memory_status,
-        "timestamp": datetime.now().isoformat()
-    }
+    try:
+        models_status = {k: v is not None for k, v in MODELS.items()}
+        memory_status = memory is not None and memory.collection is not None
+        
+        return {
+            "status": "healthy",
+            "models": models_status,
+            "memory": memory_status,
+            "imports": logger_import_success,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "imports": logger_import_success,
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.post("/predict")
 async def predict(payload: PredictRequest):
@@ -359,42 +414,6 @@ async def run_initial_ingestion():
     logger.info(f"✅ Ingestão concluída: {len(base_knowledge)} documentos adicionados")
 
 # ============================================
-# INGESTÃO DE DATASETS KAGGLE (OPCIONAL)
-# ============================================
-
-@app.post("/ingest/kaggle")
-async def ingest_kaggle_datasets():
-    """
-    Endpoint para ingerir datasets do Kaggle
-    (Executar manualmente ou via cron job)
-    """
-    if not memory:
-        raise HTTPException(status_code=503, detail="Memória não inicializada")
-    
-    try:
-        from ingest_datasets import ingest_ai4i_sample, ingest_cmapss_sample
-        
-        logger.info("📊 Iniciando ingestão de datasets Kaggle...")
-        
-        # Ingerir AI4I
-        await ingest_ai4i_sample(memory)
-        
-        # Ingerir CMAPSS
-        await ingest_cmapss_sample(memory)
-        
-        total_docs = memory.get_collection_size()
-        
-        return {
-            "status": "success",
-            "message": "Datasets ingeridos com sucesso",
-            "total_documents": total_docs
-        }
-    
-    except Exception as e:
-        logger.error(f"Erro na ingestão: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ============================================
 # EXECUÇÃO
 # ============================================
 
@@ -412,9 +431,9 @@ if __name__ == "__main__":
     logger.info("="*80)
     
     uvicorn.run(
-        "main_chat:app",
+        "main:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
+        reload=False,  # Desabilitar reload em produção
         log_level="info"
     )
