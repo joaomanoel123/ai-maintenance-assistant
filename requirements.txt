@@ -15,7 +15,6 @@ websockets==12.0
 
 # Machine Learning
 pandas==2.0.3
-numpy==1.24.3
 scikit-learn==1.3.2
 joblib==1.3.2
 
@@ -23,7 +22,6 @@ joblib==1.3.2
 tensorflow==2.15.0
 
 # Embeddings e Memória Vetorial
-sentence-transformers==2.2.2
 chromadb==0.4.18
 
 # Database
