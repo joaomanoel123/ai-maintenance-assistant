@@ -44,7 +44,7 @@ from pydantic import BaseModel
 try:
     from model_loader import load_models, MODELS, model_predict
     from embeddings import VectorMemory
-    from chat_pipeline import respond_stream_generator, extract_prediction_intent_detailed
+    from src.chat_pipeline import respond_stream_generator, extract_prediction_intent_detailed
     from db import save_experience_record, init_database
     logger_import_success = True
 except ImportError as e:
