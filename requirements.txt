@@ -1,26 +1,17 @@
-#versão 2: Completa (Com Torch - Para GPU/Modelos Locais)
+fastapi
+uvicorn[standard]
+python-dotenv
 
-# requirements-complete.txt
-# Build time: ~10-15 minutos
-# Tamanho: ~2GB
-# ⚠️ Apenas para planos pagos ou servidores com recursos
+# HuggingFace
+transformers
+huggingface_hub
+accelerate
 
-# Core
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-websockets==12.0
-pydantic==2.5.0
-python-dotenv==1.0.0
+# Tokenizers
+sentencepiece
+protobuf
 
-# HuggingFace completo
-huggingface-hub==0.20.0
-transformers==4.35.0
-torch==2.1.0
-
-# Memória Vetorial
-chromadb==0.4.18
-sentence-transformers==2.2.2
-onnxruntime==1.16.3
-
+# Logs (opcional)
+pydantic
 
 
