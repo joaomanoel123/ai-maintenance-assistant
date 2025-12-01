@@ -1,6 +1,5 @@
 #versão 2: Completa (Com Torch - Para GPU/Modelos Locais)
 
-```txt
 # requirements-complete.txt
 # Build time: ~10-15 minutos
 # Tamanho: ~2GB
@@ -34,8 +33,6 @@ onnxruntime==1.16.3
 numpy==1.24.3
 pandas==2.1.3
 scikit-learn==1.3.2
-```
-
 httpx==0.25.2
 
 
