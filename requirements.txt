@@ -1,36 +1,41 @@
-# ===============================================================================
-# REQUIREMENTS - Pipeline AGI Chat v2.1
-# ===============================================================================
+ersão 2: Completa (Com Torch - Para GPU/Modelos Locais)
 
+```txt
+# requirements-complete.txt
+# Build time: ~10-15 minutos
+# Tamanho: ~2GB
+# ⚠️ Apenas para planos pagos ou servidores com recursos
 
-# Setup tools
-setuptools>=65.5.0
-wheel>=0.41.0
-
-# API Framework
+# Core
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
 websockets==12.0
+pydantic==2.5.0
+python-dotenv==1.0.0
 
-# Machine Learning
-pandas==2.0.3
-scikit-learn==1.3.2
-joblib==1.3.2
-
-# Deep Learning (opcional - comentar se não usar)
-
-# Embeddings e Memória Vetorial
-chromadb==0.4.18
+# HuggingFace completo
+huggingface-hub==0.20.0
+transformers==4.35.0
+torch==2.1.0
+tokenizers==0.15.0
+safetensors==0.4.1
 
 # Database
-asyncpg==0.29.0
 sqlalchemy==2.0.23
+asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
-# Utilities
-python-dotenv==1.0.0
-aiofiles==23.2.1
+# Memória Vetorial
+chromadb==0.4.18
+sentence-transformers==2.2.2
+onnxruntime==1.16.3
+
+# ML
+numpy==1.24.3
+pandas==2.1.3
+scikit-learn==1.3.2
+```
+
 httpx==0.25.2
 
 
