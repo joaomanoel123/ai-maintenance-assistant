@@ -1,21 +1,372 @@
+# ============================================
+# render.yaml - Configuração Blueprint
+# ============================================
+
 services:
   - type: web
-    name: ml-pipeline-backend
-    env: python
+    name: agi-chat-api
+    runtime: python
     region: oregon
     plan: free
-    branch: main  # se você usa a branch main no GitHub
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    startCommand: cd src && uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /
+    branch: main
+    
+    # Build
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    
+    # Start (usar main.py da raiz)
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    
+    # Auto Deploy
+    autoDeploy: true
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Variáveis de Ambiente
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: TF_CPP_MIN_LOG_LEVEL
-        value: "2"
-      - key: CUDA_VISIBLE_DEVICES
-        value: "-1"
+      # HuggingFace
+      - key: HF_API_TOKEN
+        sync: false # Configurar manualmente no dashboard
+      
+      - key: HF_MODEL
+        value: mistralai/Mistral-7B-Instruct-v0.2
+      
+      - key: HF_USE_API
+        value: "true"
+      
+      - key: HF_MAX_LENGTH
+        value: "800"
+      
+      - key: HF_TEMPERATURE
+        value: "0.7"
+      
+      - key: HF_TOP_P
+        value: "0.9"
+      
+      # Database (PostgreSQL)
       - key: DATABASE_URL
-        value: "postgresql://neondb_owner:npg_E5etwTVau2JK@ep-rough-forest-aeg674mp-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
+        fromDatabase:
+          name: agi-database
+          property: connectionString
+      
+      # Python
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      
+      # App
+      - key: PORT
+        value: "10000"
+      
+      - key: HOST
+        value: "0.0.0.0"
+    
+    # Disco persistente para ChromaDB
+    disk:
+      name: chroma-data
+      mountPath: /opt/render/project/src/chroma_data
+      sizeGB: 1
+
+# Database (Opcional - PostgreSQL)
+databases:
+  - name: agi-database
+    databaseName: agi_db
+    user: agi_user
+    plan: free
+
+---
+
+# ============================================
+# requirements.txt
+# ============================================
+
+# FastAPI e servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# HuggingFace
+huggingface_hub==0.20.0
+transformers==4.35.0
+torch==2.1.0
+httpx==0.25.1
+
+# Memória Vetorial
+chromadb==0.4.18
+sentence-transformers==2.2.2
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Utils
+numpy==1.24.3
+pandas==2.1.3
+
+---
+
+# ============================================
+# .dockerignore (Opcional)
+# ============================================
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.gitignore
+.mypy_cache
+.pytest_cache
+.hypothesis
+*.egg-info/
+dist/
+build/
+*.egg
+.DS_Store
+*.swp
+*.swo
+*~
+
+---
+
+# ============================================
+# Procfile (Alternativo ao render.yaml)
+# ============================================
+
+web: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+---
+
+# ============================================
+# runtime.txt (Especificar versão Python)
+# ============================================
+
+python-3.11.0
+
+---
+
+# ============================================
+# .gitignore
+# ============================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+.venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ChromaDB
+chroma_data/
+*.parquet
+
+# Models (se baixar localmente)
+models/
+*.bin
+*.safetensors
+
+---
+
+# ============================================
+# README.md - Deploy Instructions
+# ============================================
+
+# 🚀 AGI Chat API - Deploy no Render
+
+## 📁 Estrutura do Projeto
+
+```
+seu-projeto/
+├── main.py # ← Ponto de entrada (raiz)
+├── src/
+│ ├── main.py # App FastAPI
+│ ├── chat_pipeline.py
+│ ├── llm_huggingface.py
+│ ├── utils_llm.py
+│ ├── shared.py
+│ ├── embeddings.py
+│ ├── model_loader.py
+│ └── db.py
+├── requirements.txt
+├── render.yaml
+├── runtime.txt
+└── .gitignore
+```
+
+## 🔧 Configuração no Render
+
+### Método 1: Via Dashboard
+
+1. **Criar novo Web Service**
+   - Connect Repository
+   - Selecione seu repo
+
+2. **Configurações:**
+   ```
+   Name: agi-chat-api
+   Region: Oregon (US West)
+   Branch: main
+   Runtime: Python 3
+   
+   Build Command:
+   pip install --no-cache-dir -r requirements.txt
+   
+   Start Command:
+   uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+
+3. **Environment Variables:**
+   ```
+   HF_API_TOKEN=seu_token_aqui
+   HF_MODEL=mistralai/Mistral-7B-Instruct-v0.2
+   HF_USE_API=true
+   DATABASE_URL=sua_url_postgres (opcional)
+   ```
+
+4. **Deploy**
+   - Salvar e aguardar deploy
+
+### Método 2: Via render.yaml (Automático)
+
+1. Fazer push do `render.yaml` para o repositório
+2. No Render: New → Blueprint
+3. Selecionar repositório
+4. Configurar variáveis secretas manualmente:
+   - `HF_API_TOKEN`
+   - `DATABASE_URL` (se usar)
+
+## ✅ Verificar Deploy
+
+Acessar:
+- `https://seu-app.onrender.com/` - Root
+- `https://seu-app.onrender.com/health` - Health check
+- `https://seu-app.onrender.com/docs` - API docs
+- `https://seu-app.onrender.com/api/info` - System info
+
+## 🐛 Debug
+
+Se der erro, verificar:
+
+1. **Logs do Render:**
+   - Dashboard → Logs
+
+2. **Endpoint de debug:**
+   ```bash
+   curl https://seu-app.onrender.com/api/info
+   ```
+
+3. **Estrutura de arquivos:**
+   ```bash
+   # No Shell do Render
+   ls -la
+   ls -la src/
+   ```
+
+## 📝 Comandos Úteis
+
+```bash
+# Testar localmente
+python main.py
+
+# Ou com uvicorn
+uvicorn main:app --reload
+
+# Ver logs em tempo real no Render
+render logs
+```
+
+## 🔄 Auto Deploy
+
+O auto deploy está configurado. Basta fazer:
+
+```bash
+git add .
+git commit -m "🚀 Update"
+git push origin main
+```
+
+O Render vai detectar e fazer deploy automaticamente!
+
+---
+
+## 📊 Monitoramento
+
+- **Logs:** Dashboard → Logs
+- **Metrics:** Dashboard → Metrics
+- **Health:** `/health` endpoint
+- **Status:** Dashboard mostra uptime
+
+---
+
+## 🆘 Suporte
+
+Se precisar de ajuda:
+1. Verificar logs
+2. Testar endpoints de debug
+3. Verificar variáveis de ambiente
+4. Consultar documentação do Render
