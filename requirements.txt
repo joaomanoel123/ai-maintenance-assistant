@@ -1,4 +1,4 @@
-ersão 2: Completa (Com Torch - Para GPU/Modelos Locais)
+#versão 2: Completa (Com Torch - Para GPU/Modelos Locais)
 
 ```txt
 # requirements-complete.txt
