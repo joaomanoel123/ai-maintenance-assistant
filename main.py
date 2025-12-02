@@ -68,7 +68,7 @@ except ImportError as e:
     try:
         # Fallback: importar main.py diretamente
         sys.path.insert(0, src_dir)
-        import main as src.main
+        import main as main_chat
         app = src_main.app
         logger.info("✅ Aplicação importada com sucesso (fallback)!")
         
