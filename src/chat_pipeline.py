@@ -321,12 +321,33 @@ async def respond_stream_generator(
         
         # 6. Limpar e validar resposta
         full_response = clean_llm_response(full_response)
-        
+
         if not validate_llm_response(full_response):
             logger.warning("Resposta inválida gerada")
             yield "\n\n⚠️ Desculpe, não consegui gerar uma resposta adequada."
             return
-        
+
         # 7. Salvar experiência no banco
         try:
-            intent = prediction
+            intent = (
+                prediction_info.get("intent")
+                if prediction_info else "chat"
+            )
+
+            await save_experience_record(
+                user_id=user_id,
+                message=user_message,
+                response=full_response,
+                intent=intent,
+                timestamp=datetime.now().isoformat()
+            )
+
+        except Exception as e:
+            logger.error(f"Erro ao salvar experiência: {e}")
+
+        logger.info("✅ Pipeline concluído")
+        return
+
+    except Exception as e:
+        logger.error(f"Erro inesperado no pipeline: {e}")
+        yield "⚠️ Ocorreu um erro interno no pipeline."
