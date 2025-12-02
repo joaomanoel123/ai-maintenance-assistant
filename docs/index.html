@@ -1,3 +1,15 @@
+Conversa aberta. 1 mensagem não lida.
+
+Pular para o conteúdo
+Como usar o Gmail com leitores de tela
+1 de 7.350
+(sem assunto)
+Caixa de entrada
+
+João Manoel <manoelclb05@gmail.com>
+19:43 (há 7 minutos)
+para mim
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -21,6 +33,29 @@
             line-height: 1.5;
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* Animações para notificação */
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
         }
 
         /* ========================================
@@ -213,31 +248,6 @@
             box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
         }
 
-        .hero-decoration {
-            position: absolute;
-            right: 10%;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 500px;
-            height: 500px;
-            border: 2px solid #00d4ff;
-            border-radius: 50%;
-            opacity: 0.3;
-            z-index: 1;
-        }
-
-        .hero-decoration::before {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            border: 2px solid #667eea;
-            border-radius: 50%;
-            top: 50px;
-            left: 50px;
-            opacity: 0.5;
-        }
-
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -279,7 +289,7 @@
         }
 
         /* ========================================
-           ANÁLISE PAGE
+           ANÁLISE PAGE (MANTIDO ORIGINAL)
         ======================================== */
         .analysis-grid {
             display: grid;
@@ -359,7 +369,6 @@
             cursor: not-allowed;
         }
 
-        /* Result Display */
         .result-card {
             margin-top: 30px;
             padding: 25px;
@@ -370,10 +379,6 @@
 
         .result-item {
             margin-bottom: 20px;
-        }
-
-        .result-item:last-child {
-            margin-bottom: 0;
         }
 
         .result-key {
@@ -391,163 +396,323 @@
         }
 
         /* ========================================
-           CHAT PAGE
+           CHAT PAGE COM ESFERA (NOVO DESIGN)
         ======================================== */
-        .chat-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
+        #page-chat {
+            background: #0a0e27;
+            min-height: 80vh;
+        }
+
+        .sphere-chat-container {
+            width: 100%;
             max-width: 1000px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
         }
 
-        .chat-header {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px 35px;
+        /* ESFERA ANIMADA */
+        .sphere-square {
+            position: relative;
+            width: 300px;
+            height: 300px;
             display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .chat-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 28px;
+            align-items: center;
+            z-index: 20;
+            margin-bottom: 20px;
         }
 
-        .chat-info h2 {
-            font-size: 22px;
+        .sphere-square span {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(#6b72ff00 50%, #000dff3b 40%);
+            box-shadow: 0 0 50px rgb(25, 0, 255), inset 0 0 50px rgb(25, 0, 255);
+            border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+            transition: 0.5s;
+        }
+
+        .sphere-square span:nth-child(1) {
+            animation: sphereRotate1 6s linear infinite;
+            z-index: 21;
+        }
+
+        .sphere-square span:nth-child(2) {
+            animation: sphereRotate2 4s linear infinite;
+            z-index: 22;
+        }
+
+        .sphere-square span:nth-child(3) {
+            animation: sphereRotate3 8s linear infinite;
+            z-index: 23;
+        }
+
+        @keyframes sphereRotate1 {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes sphereRotate2 {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+
+        @keyframes sphereRotate3 {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* SVG FRAME */
+        .sphere-svg-frame {
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            transform-style: preserve-3d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .sphere-svg-frame svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            fill: none;
+            filter: drop-shadow(0 0 12px #00aaff);
+            animation: svgRotate 5s ease-in-out infinite alternate;
+        }
+
+        @keyframes svgRotate {
+            0%, 50% { transform: rotate(0deg) skew(0deg); }
+            70%, 100% { transform: rotate(-80deg) skew(30deg); }
+        }
+
+        /* STATUS */
+        .sphere-status {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 30;
+        }
+
+        .sphere-status h3 {
+            font-size: 24px;
             font-weight: 600;
             color: #ffffff;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
-        .chat-status {
+        .sphere-status-indicator {
             font-size: 14px;
             color: #10b981;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
         }
 
-        .chat-status::before {
+        .sphere-status-indicator::before {
             content: '';
             width: 8px;
             height: 8px;
             background: #10b981;
             border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
+            animation: statusPulse 2s ease-in-out infinite;
         }
 
-        .chat-messages {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 35px;
-            height: 500px;
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* MENSAGENS */
+        .sphere-chat-messages {
+            width: 100%;
+            max-width: 800px;
+            max-height: 450px;
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            z-index: 30;
         }
 
-        .chat-messages::-webkit-scrollbar {
+        .sphere-chat-messages::-webkit-scrollbar {
             width: 8px;
         }
 
-        .chat-messages::-webkit-scrollbar-track {
+        .sphere-chat-messages::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb {
+        .sphere-chat-messages::-webkit-scrollbar-thumb {
             background: linear-gradient(135deg, #00d4ff 0%, #667eea 100%);
             border-radius: 4px;
         }
 
-        .chat-message {
+        .sphere-chat-message {
             max-width: 70%;
-            padding: 16px 20px;
-            border-radius: 16px;
+            padding: 14px 20px;
+            border-radius: 18px;
             font-size: 15px;
-            line-height: 1.6;
-            animation: slideIn 0.3s ease;
+            line-height: 1.7;
+            margin-bottom: 15px;
+            animation: messageSlideIn 0.3s ease;
         }
 
-        .chat-message.user {
-            background: linear-gradient(135deg, #00d4ff 0%, #667eea 100%);
+        .sphere-chat-message.user {
+            background: #0045ff;
             color: #ffffff;
-            align-self: flex-end;
+            margin-left: auto;
             border-bottom-right-radius: 4px;
+            border: 1px solid #0045ff;
+            text-align: right;
         }
 
-        .chat-message.bot {
-            background: rgba(255, 255, 255, 0.08);
+        .sphere-chat-message.bot {
+            background: rgba(0, 212, 255, 0.1);
             color: #ffffff;
-            align-self: flex-start;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-right: auto;
             border-bottom-left-radius: 4px;
+            border: 2px solid cyan;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
+        @keyframes messageSlideIn {
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .chat-input-container {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px 35px;
+        /* TYPING INDICATOR */
+        .sphere-typing-indicator {
+            display: none;
+            padding: 14px 20px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid cyan;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: 80px;
+            margin-bottom: 15px;
+        }
+
+        .sphere-typing-indicator.active {
+            display: block;
+        }
+
+        .sphere-typing-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d4ff;
+            margin: 0 3px;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .sphere-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .sphere-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-12px); }
+        }
+
+        /* INPUT COM GLOW */
+        .sphere-chat-input-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #181818a8;
+            border: 1px solid blue;
+            box-shadow: 0 0 20px rgb(25, 0, 255), inset 0 0 0px rgb(25, 0, 255);
+            border-radius: 50px;
             display: flex;
-            gap: 15px;
+            align-items: center;
+            padding: 12px 18px;
+            gap: 12px;
+            z-index: 1000;
         }
 
-        .chat-input {
+        .sphere-chat-input {
             flex: 1;
-            padding: 16px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50px;
-            color: #ffffff;
-            font-size: 16px;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: #00d4ff;
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
-        }
-
-        .chat-send-btn {
-            padding: 16px 35px;
-            background: linear-gradient(135deg, #00d4ff 0%, #667eea 100%);
-            color: #ffffff;
+            background: transparent;
             border: none;
-            border-radius: 50px;
+            outline: none;
+            color: white;
             font-size: 16px;
-            font-weight: 600;
+        }
+
+        .sphere-chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* BOTÕES GLOW */
+        .sphere-glow-btn {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            min-height: 42px;
+            border: none;
+            outline: none;
+            color: #fff;
+            background: #111;
             cursor: pointer;
+            position: relative;
+            z-index: 1001;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s;
         }
 
-        .chat-send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        .sphere-glow-btn:before {
+            content: '';
+            background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            background-size: 400%;
+            z-index: -1;
+            filter: blur(6px);
+            width: calc(100% + 4px);
+            height: calc(100% + 4px);
+            animation: glowingButton 20s linear infinite;
+            opacity: 0;
+            transition: opacity .3s ease-in-out;
+            border-radius: 12px;
+        }
+
+        .sphere-glow-btn:hover:before {
+            opacity: 1;
+        }
+
+        .sphere-glow-btn:after {
+            z-index: -1;
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            left: 0;
+            top: 0;
+            border-radius: 12px;
+        }
+
+        @keyframes glowingButton {
+            0% { background-position: 0 0; }
+            50% { background-position: 400% 0; }
+            100% { background-position: 0 0; }
         }
 
         /* ========================================
-           STATS PAGE
+           STATS PAGE (MANTIDA ORIGINAL)
         ======================================== */
         .stats-dashboard {
             display: grid;
@@ -573,10 +738,6 @@
             margin-bottom: 15px;
         }
 
-        .stats-item:last-child {
-            margin-bottom: 0;
-        }
-
         .stats-label {
             font-size: 16px;
             color: #8892b0;
@@ -594,10 +755,6 @@
         @media (max-width: 1024px) {
             .hero-section {
                 grid-template-columns: 1fr;
-            }
-
-            .hero-decoration {
-                display: none;
             }
 
             .analysis-grid,
@@ -631,8 +788,37 @@
                 grid-template-columns: 1fr;
             }
 
-            .chat-message {
-                max-width: 85%;
+            .sphere-square {
+                width: 240px;
+                height: 240px;
+            }
+
+            .sphere-svg-frame {
+                width: 280px;
+                height: 280px;
+            }
+
+            .sphere-chat-message {
+                max-width: 80%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sphere-square {
+                width: 200px;
+                height: 200px;
+            }
+
+            .sphere-svg-frame {
+                width: 240px;
+                height: 240px;
+            }
+
+            .sphere-glow-btn {
+                width: 38px;
+                height: 38px;
+                min-width: 38px;
+                min-height: 38px;
             }
         }
     </style>
@@ -670,7 +856,6 @@
                         Iniciar Análise →
                     </button>
                 </div>
-                <div class="hero-decoration"></div>
             </section>
 
             <div class="stats-grid">
@@ -698,7 +883,7 @@
             <div class="analysis-grid">
                 <div class="card">
                     <h2 class="card-title">⚙️ Configuração de Análise Preditiva</h2>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Tipo de Análise</label>
                         <select class="form-select" id="analysis-type">
@@ -764,10 +949,6 @@
                 <div class="card">
                     <h2 class="card-title">📊 Informações do Sistema</h2>
                     <div class="stats-item">
-                        <span class="stats-label">Status da API</span>
-                        <span class="stats-num" id="api-status">●</span>
-                    </div>
-                    <div class="stats-item">
                         <span class="stats-label">Modelos Carregados</span>
                         <span class="stats-num" id="models-loaded">-</span>
                     </div>
@@ -783,32 +964,85 @@
             </div>
         </div>
 
-        <!-- CHAT PAGE -->
+        <!-- CHAT PAGE COM ESFERA -->
         <div class="page" id="page-chat">
-            <div class="chat-container">
-                <div class="chat-header">
-                    <div class="chat-avatar">🤖</div>
-                    <div class="chat-info">
-                        <h2>Assistente AGI</h2>
-                        <div class="chat-status">Online e Pronto</div>
+            <div class="sphere-chat-container">
+                <!-- Esfera Animada com SVG -->
+                <div class="sphere-square">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                    <!-- SVG Frame Animado -->
+                    <div class="sphere-svg-frame">
+                        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="100" cy="100" r="90" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+                            <circle cx="100" cy="100" r="70" stroke="#667eea" stroke-width="0.5" opacity="0.4"/>
+                            <circle cx="100" cy="100" r="50" stroke="#00d4ff" stroke-width="0.5" opacity="0.5"/>
+                            <line x1="100" y1="10" x2="100" y2="30" stroke="#00d4ff" stroke-width="1" opacity="0.6"/>
+                            <line x1="100" y1="170" x2="100" y2="190" stroke="#00d4ff" stroke-width="1" opacity="0.6"/>
+                            <line x1="10" y1="100" x2="30" y2="100" stroke="#667eea" stroke-width="1" opacity="0.6"/>
+                            <line x1="170" y1="100" x2="190" y2="100" stroke="#667eea" stroke-width="1" opacity="0.6"/>
+                            <circle cx="100" cy="20" r="2" fill="#00d4ff" opacity="0.8"/>
+                            <circle cx="100" cy="180" r="2" fill="#00d4ff" opacity="0.8"/>
+                            <circle cx="20" cy="100" r="2" fill="#667eea" opacity="0.8"/>
+                            <circle cx="180" cy="100" r="2" fill="#667eea" opacity="0.8"/>
+                        </svg>
                     </div>
                 </div>
 
-                <div class="chat-messages" id="chatMessages">
-                    <div class="chat-message bot">
+                <!-- Status do Assistente -->
+                <div class="sphere-status">
+                    <h3>🤖 Assistente AGI</h3>
+                    <div class="sphere-status-indicator">Online e Pronto</div>
+                </div>
+
+                <!-- Mensagens do Chat -->
+                <div class="sphere-chat-messages" id="sphereChatMessages">
+                    <div class="sphere-chat-message bot">
                         👋 Olá! Sou o assistente AGI. Como posso ajudar você hoje?
                     </div>
                 </div>
 
-                <div class="chat-input-container">
+                <!-- Indicador de digitação -->
+                <div class="sphere-typing-indicator" id="sphereTypingIndicator">
+                    <span class="sphere-typing-dot"></span>
+                    <span class="sphere-typing-dot"></span>
+                    <span class="sphere-typing-dot"></span>
+                </div>
+
+                <!-- Input do Chat -->
+                <div class="sphere-chat-input-container">
                     <input 
                         type="text" 
-                        class="chat-input" 
-                        id="chatInput" 
+                        class="sphere-chat-input" 
+                        id="sphereChatInput" 
                         placeholder="Digite sua mensagem..."
-                        onkeypress="if(event.key==='Enter') sendMessage()"
-                    >
-                    <button class="chat-send-btn" onclick="sendMessage()">Enviar →</button>
+                        onkeypress="if(event.key==='Enter') sendSphereMessage()"
+                    />
+                    
+                    <button class="sphere-glow-btn" onclick="sendSphereMessage()" title="Enviar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                    
+                    <button class="sphere-glow-btn" onclick="clearSphereChat()" title="Limpar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                    
+                    <button class="sphere-glow-btn" onclick="toggleVoice()" title="Voz">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -900,284 +1134,89 @@
     </div>
 
     <script>
-        // ========================================
-        // CONFIGURAÇÃO
-        // ========================================
-        const API_URL = "https://ai-maintenance-assistant.onrender.com"; // TROCAR: https://seu-app.onrender.com
+/* ===============================
+    CONFIGURAÇÃO
+=============================== */
+const API_URL = "https://ai-maintenance-assistant-1.onrender.com";
 
-        let currentResultId = null;
+/* ===============================
+    SELETORES
+=============================== */
+const messagesBox = document.querySelector(".sphere-chat-messages");
+const inputBox = document.querySelector(".sphere-chat-input");
+const typingIndicator = document.querySelector(".sphere-typing-indicator");
+const sendBtn = document.querySelector("#sendBtn");
 
-        // ========================================
-        // LOADING SCREEN
-        // ========================================
-        window.addEventListener('DOMContentLoaded', () => {
-            // Simular carregamento
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('hidden');
-                initApp();
-            }, 2000);
+/* ===============================
+    FUNÇÃO: ADICIONAR MENSAGEM
+=============================== */
+function addMessage(text, sender = "bot") {
+    const div = document.createElement("div");
+    div.classList.add("sphere-chat-message", sender);
+    div.textContent = text;
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+}
+
+/* ===============================
+    FUNÇÃO: STREAM DA API
+=============================== */
+async function sendMessage() {
+    const message = inputBox.value.trim();
+    if (!message) return;
+
+    addMessage(message, "user");
+    inputBox.value = "";
+    typingIndicator.classList.add("active");
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
         });
 
-        // ========================================
-        // NAVIGATION
-        // ========================================
-        function showPage(pageName) {
-            // Esconder todas as páginas
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-
-            // Remover active dos nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // Mostrar página selecionada
-            document.getElementById(`page-${pageName}`).classList.add('active');
-
-            // Ativar nav item
-            event.target.classList.add('active');
-
-            // Carregar dados específicos da página
-            if (pageName === 'stats') {
-                loadStats();
-            }
+        if (!response.ok) {
+            typingIndicator.classList.remove("active");
+            addMessage("❌ Erro no servidor.", "bot");
+            return;
         }
 
-        // ========================================
-        // INIT APP
-        // ========================================
-        async function initApp() {
-            await checkAPIStatus();
-            await loadHomeStats();
-            updateLastUpdate();
-        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let botMessage = "";
+        let botBubble = null;
 
-        // ========================================
-        // API STATUS
-        // ========================================
-        async function checkAPIStatus() {
-            try {
-                const response = await fetch(`${API_URL}/health`);
-                const data = await response.json();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-                if (data.status === 'healthy') {
-                    document.getElementById('api-status').textContent = '● Online';
-                    document.getElementById('api-status').style.color = '#10b981';
-                } else {
-                    throw new Error('Unhealthy');
-                }
-            } catch (error) {
-                document.getElementById('api-status').textContent = '● Offline';
-                document.getElementById('api-status').style.color = '#ef4444';
-            }
-        }
+            const chunk = decoder.decode(value);
 
-        // ========================================
-        // LOAD STATS
-        // ========================================
-        async function loadHomeStats() {
-            try {
-                const response = await fetch(`${API_URL}/stats`);
-                const data = await response.json();
-
-                document.getElementById('home-stat-predictions').textContent = 
-                    data.predictions?.total || '0';
-                document.getElementById('home-stat-feedback').textContent = 
-                    data.feedback?.total_received || '0';
-
-            } catch (error) {
-                console.error('Erro ao carregar stats:', error);
-            }
-        }
-
-        async function loadStats() {
-            try {
-                const response = await fetch(`${API_URL}/stats`);
-                const data = await response.json();
-
-                document.getElementById('total-predictions').textContent = 
-                    data.predictions?.total || '0';
-                document.getElementById('total-feedback').textContent = 
-                    data.feedback?.total_received || '0';
-                document.getElementById('avg-score').textContent = 
-                    data.feedback?.average_score || '-';
-                document.getElementById('short-memory').textContent = 
-                    data.memory?.short_term_size || '0';
-                document.getElementById('long-memory').textContent = 
-                    data.memory?.long_term_size || '0';
-                document.getElementById('models-loaded').textContent = 
-                    data.system?.models_loaded || '-';
-
-            } catch (error) {
-                console.error('Erro ao carregar stats:', error);
-            }
-        }
-
-        function updateLastUpdate() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            document.getElementById('last-update').textContent = timeStr;
-            document.getElementById('last-analysis').textContent = timeStr;
-        }
-
-        // ========================================
-        // ANALYSIS
-        // ========================================
-        async function runAnalysis() {
-            const btn = document.getElementById('analyze-btn');
-            const resultDisplay = document.getElementById('result-display');
-
-            // Preparar dados
-            const requestData = {
-                analysis_type: document.getElementById('analysis-type').value,
-                data: {
-                    type: parseInt(document.getElementById('machine-type').value),
-                    air_temperature: parseFloat(document.getElementById('air-temp').value),
-                    process_temperature: parseFloat(document.getElementById('process-temp').value),
-                    rpm: parseFloat(document.getElementById('rpm').value),
-                    torque: parseFloat(document.getElementById('torque').value),
-                    tool_wear: parseFloat(document.getElementById('tool-wear').value)
-                },
-                enable_reasoning: true,
-                enable_decision: true,
-                generate_explanation: true
-            };
-
-            // Loading
-            btn.disabled = true;
-            btn.textContent = '⏳ Processando...';
-            resultDisplay.style.display = 'none';
-
-            try {
-                const response = await fetch(`${API_URL}/predict`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData)
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const result = await response.json();
-                currentResultId = result.result_id;
-
-                // Exibir resultado
-                displayAnalysisResult(result);
-                resultDisplay.style.display = 'block';
-
-                // Atualizar stats
-                updateLastUpdate();
-                loadHomeStats();
-
-            } catch (error) {
-                alert('❌ Erro ao executar análise: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🚀 Executar Análise Completa';
-            }
-        }
-
-        function displayAnalysisResult(result) {
-            const pred = result.prediction;
-            const reasoning = result.reasoning;
-
-            // Predição
-            if (pred.type === 'failure') {
-                document.getElementById('result-prediction').textContent = 
-                    `${(pred.value * 100).toFixed(1)}% de probabilidade de falha`;
-            } else {
-                document.getElementById('result-prediction').textContent = 
-                    `${pred.value.toFixed(0)} ciclos restantes`;
+            if (!botBubble) {
+                botBubble = document.createElement("div");
+                botBubble.classList.add("sphere-chat-message", "bot");
+                messagesBox.appendChild(botBubble);
             }
 
-            // Confiança
-            document.getElementById('result-confidence').textContent = 
-                `${(pred.confidence * 100).toFixed(0)}%`;
-
-            // Severidade
-            document.getElementById('result-severity').textContent = 
-                reasoning.severity;
-
-            // Atualizar cor da severidade
-            const severityEl = document.getElementById('result-severity');
-            const severityColors = {
-                'LOW': '#10b981',
-                'MEDIUM': '#f59e0b',
-                'HIGH': '#ef4444',
-                'CRITICAL': '#dc2626'
-            };
-            severityEl.style.color = severityColors[reasoning.severity] || '#00d4ff';
+            botMessage += chunk;
+            botBubble.textContent = botMessage;
+            messagesBox.scrollTop = messagesBox.scrollHeight;
         }
 
-        // ========================================
-        // CHAT
-        // ========================================
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
+    } catch (error) {
+        addMessage("❌ Não foi possível conectar à API.", "bot");
+    }
 
-            if (!message) return;
+    typingIndicator.classList.remove("active");
+}
+  /* ===============================
+    EVENTOS
+    =============================== */
+    sendBtn.addEventListener("click", sendMessage);
 
-            // Adicionar mensagem do usuário
-            addChatMessage(message, 'user');
-            input.value = '';
-
-            // Simular resposta do bot
-            setTimeout(() => {
-                const response = generateBotResponse(message);
-                addChatMessage(response, 'bot');
-            }, 800);
-        }
-
-        function addChatMessage(text, sender) {
-            const container = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender}`;
-            messageDiv.textContent = text;
-
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function generateBotResponse(message) {
-            const msg = message.toLowerCase();
-
-            if (msg.includes('olá') || msg.includes('oi') || msg.includes('hello')) {
-                return '👋 Olá! Como posso ajudá-lo com análises preditivas hoje?';
-            } else if (msg.includes('ajuda') || msg.includes('help')) {
-                return '📚 Posso ajudar com:\n\n• Executar análises preditivas\n• Explicar resultados\n• Visualizar estatísticas\n• Dúvidas sobre RUL e falhas\n\nO que você gostaria de saber?';
-            } else if (msg.includes('análise') || msg.includes('analysis')) {
-                return '📊 Para executar uma análise:\n\n1. Vá para a página "Análise"\n2. Configure os parâmetros dos sensores\n3. Escolha o tipo (Falhas ou RUL)\n4. Clique em "Executar Análise"\n\nPosso te ajudar com algo mais?';
-            } else if (msg.includes('rul')) {
-                return '🔧 RUL (Remaining Useful Life) é a vida útil restante estimada de um equipamento.\n\nNosso modelo CNN-RNN analisa dados de sensores para prever quantos ciclos operacionais restam antes de uma manutenção ser necessária.';
-            } else if (msg.includes('falha') || msg.includes('failure')) {
-                return '⚠️ Nossa análise de falhas usa Random Forest para prever a probabilidade de um equipamento apresentar falha.\n\nO modelo analisa:\n• Temperatura\n• Rotação (RPM)\n• Torque\n• Desgaste\n\nE retorna a probabilidade de falha com nível de confiança.';
-            } else if (msg.includes('stats') || msg.includes('estatísticas')) {
-                return '📈 Veja a página "Estatísticas" para visualizar:\n\n• Performance do sistema\n• Métricas RLHF\n• Uso de memória\n• Status da API\n\nTodos os dados são atualizados em tempo real!';
-            } else if (msg.includes('como funciona')) {
-                return '🤖 Sistema AGI Generativa:\n\n1. **Predição**: ML/DL para análise\n2. **Raciocínio**: Análise causal\n3. **Decisão**: Recomendações inteligentes\n4. **RLHF**: Aprendizado por feedback\n5. **Memória**: Contexto persistente\n\nUm sistema completo de IA!';
-            } else if (msg.includes('obrigado') || msg.includes('thanks')) {
-                return '😊 Por nada! Estou aqui para ajudar. Qualquer dúvida, é só perguntar!';
-            } else {
-                return `Recebi sua mensagem: "${message}"\n\nPergunte sobre:\n• Como fazer análises\n• O que é RUL\n• Predição de falhas\n• Estatísticas do sistema\n• Como o AGI funciona`;
-            }
-        }
-
-        // ========================================
-        // AUTO REFRESH
-        // ========================================
-        setInterval(() => {
-            checkAPIStatus();
-            const currentPage = document.querySelector('.page.active').id;
-            if (currentPage === 'page-home') {
-                loadHomeStats();
-            } else if (currentPage === 'page-stats') {
-                loadStats();
-            }
-        }, 30000); // A cada 30 segundos
-    </script>
+    inputBox.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+    });
+        </script>
 </body>
-</html>
