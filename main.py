@@ -19,171 +19,41 @@ Deploy: Render.com
 ===============================================================================
 """
 
-import sys
-import os
-import logging
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# ============================================
-# CONFIGURAÇÃO DE PATHS
-# ============================================
+# importa o pipeline do chat dentro da pasta src
+from src.chat_pipeline import respond_stream_generator
 
-# Adicionar diretório src ao path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, 'src')
+app = FastAPI(title="AI Maintenance Assistant")
 
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
-
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# liberar chamadas do frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-logger = logging.getLogger(__name__)
 
-# ============================================
-# IMPORT DA APLICAÇÃO
-# ============================================
+@app.get("/")
+def home():
+    return {"status": "ok", "message": "API is running!"}
 
-logger.info("="*80)
-logger.info("🚀 INICIANDO AGI CHAT API")
-logger.info("="*80)
-logger.info(f"📁 Diretório atual: {current_dir}")
-logger.info(f"📁 Diretório src: {src_dir}")
-logger.info(f"📂 Python path: {sys.path[:3]}")
 
-try:
-    # Tentar importar do módulo src
-    logger.info("📦 Importando aplicação de src.main...")
-    from src.main import app
-    logger.info("✅ Aplicação importada com sucesso!")
-    
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar de src.main: {e}")
-    logger.info("🔄 Tentando importar diretamente do main.py em src/...")
-    
-    try:
-        # Fallback: importar main.py diretamente
-        sys.path.insert(0, src_dir)
-        import main as main_chat
-        app = src_main.app
-        logger.info("✅ Aplicação importada com sucesso (fallback)!")
-        
-    except ImportError as e2:
-        logger.error(f"❌ Erro no fallback: {e2}")
-        logger.error(f"📂 Arquivos em {src_dir}: {os.listdir(src_dir) if os.path.exists(src_dir) else 'Diretório não existe'}")
-        
-        # Criar app mínima para debug
-        from fastapi import FastAPI
-        from fastapi.responses import JSONResponse
-        
-        app = FastAPI(title="AGI API - Debug Mode")
-        
-        @app.get("/")
-        def debug_root():
-            return {
-                "status": "error",
-                "message": "Aplicação não carregada - modo debug",
-                "current_dir": current_dir,
-                "src_dir": src_dir,
-                "src_exists": os.path.exists(src_dir),
-                "files_in_current": os.listdir(current_dir) if os.path.exists(current_dir) else [],
-                "files_in_src": os.listdir(src_dir) if os.path.exists(src_dir) else [],
-                "python_path": sys.path[:5],
-                "error": str(e2)
-            }
-        
-        @app.get("/health")
-        def debug_health():
-            return {"status": "debug_mode", "app_loaded": False}
-        
-        logger.warning("⚠️ Aplicação iniciada em MODO DEBUG")
+@app.post("/chat")
+async def chat(payload: dict):
+    user_message = payload.get("message", "")
+    user_id = payload.get("user_id", "")
 
-# ============================================
-# CONFIGURAÇÃO ADICIONAL
-# ============================================
+    response_text = ""
 
-# Adicionar middleware de logging para debug
-try:
-    from fastapi.middleware.cors import CORSMiddleware
-    
-    # CORS já está configurado em src/main.py, mas garantir que está ativo
-    logger.info("✅ CORS middleware verificado")
-    
-except Exception as e:
-    logger.warning(f"⚠️ Aviso ao configurar middleware: {e}")
+    async for chunk in respond_stream_generator(
+        user_message=user_message,
+        user_id=user_id,
+        memory=None,
+        models={}
+    ):
+        response_text += chunk
 
-# ============================================
-# INFORMAÇÕES DE DEPLOY
-# ============================================
-
-PORT = int(os.getenv("PORT", 10000))
-HOST = os.getenv("HOST", "0.0.0.0")
-
-logger.info("="*80)
-logger.info("📡 CONFIGURAÇÃO DE DEPLOY")
-logger.info("="*80)
-logger.info(f"🌐 Host: {HOST}")
-logger.info(f"🔌 Port: {PORT}")
-logger.info(f"🔧 Python: {sys.version}")
-logger.info(f"📍 Working Dir: {os.getcwd()}")
-logger.info("="*80)
-
-# ============================================
-# HEALTH CHECK ADICIONAL
-# ============================================
-
-@app.get("/api/health")
-def api_health():
-    """Health check adicional para monitoramento"""
-    return {
-        "status": "healthy",
-        "service": "AGI Chat API",
-        "version": "2.1",
-        "host": HOST,
-        "port": PORT,
-        "python_version": sys.version,
-        "working_directory": os.getcwd()
-    }
-
-@app.get("/api/info")
-def api_info():
-    """Informações do sistema"""
-    return {
-        "current_dir": current_dir,
-        "src_dir": src_dir,
-        "src_exists": os.path.exists(src_dir),
-        "python_path": sys.path[:5],
-        "environment": {
-            "PORT": PORT,
-            "HOST": HOST,
-            "HF_MODEL": os.getenv("HF_MODEL", "Not set"),
-            "HF_USE_API": os.getenv("HF_USE_API", "Not set"),
-        }
-    }
-
-# ============================================
-# EXECUÇÃO (para testes locais)
-# ============================================
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    logger.info("="*80)
-    logger.info("🚀 INICIANDO SERVIDOR UVICORN")
-    logger.info("="*80)
-    logger.info(f"🔗 Acesse: http://{HOST}:{PORT}")
-    logger.info(f"📚 Docs: http://{HOST}:{PORT}/docs")
-    logger.info("="*80)
-    
-    uvicorn.run(
-        "main:app",  # Este arquivo
-        host=HOST,
-        port=PORT,
-        reload=False,  # Desabilitar reload em produção
-        log_level="info",
-        access_log=True
-    )
+    return {"response": response_text}
