@@ -19,15 +19,16 @@ Deploy: Render.com
 ===============================================================================
 """
 
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-# importa o pipeline do chat dentro da pasta src
+# Import correto do chat_pipeline dentro de src/
 from src.chat_pipeline import respond_stream_generator
 
 app = FastAPI(title="AI Maintenance Assistant")
 
-# liberar chamadas do frontend
+# CORS liberado
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,24 +37,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rota simples
 @app.get("/")
 def home():
-    return {"status": "ok", "message": "API is running!"}
+    return {"status": "ok", "message": "API is running!", "version": "1.0"}
 
 
-@app.post("/chat")
-async def chat(payload: dict):
-    user_message = payload.get("message", "")
-    user_id = payload.get("user_id", "")
+# ==========================
+#  WEBSOCKET DO CHAT (frontend usa este!)
+# ==========================
 
-    response_text = ""
+@app.websocket("/ws-chat")
+async def websocket_chat(websocket: WebSocket):
+    await websocket.accept()
 
-    async for chunk in respond_stream_generator(
-        user_message=user_message,
-        user_id=user_id,
-        memory=None,
-        models={}
-    ):
-        response_text += chunk
+    try:
+        while True:
+            data = await websocket.receive_json()
+            user_message = data.get("message", "")
+            user_id = data.get("user_id", "anonymous")
 
-    return {"response": response_text}
+            # streaming
+            async for chunk in respond_stream_generator(
+                user_message=user_message,
+                user_id=user_id,
+                memory=None,   # sem memória ainda
+                models={}
+            ):
+                await websocket.send_json({
+                    "type": "token",
+                    "data": chunk
+                })
+
+            await websocket.send_json({
+                "type": "end",
+                "data": "done"
+            })
+
+    except WebSocketDisconnect:
+        print("Cliente desconectado")
+
+
+
+# Execução local
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True
+    )
