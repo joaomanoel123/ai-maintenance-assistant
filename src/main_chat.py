@@ -286,43 +286,7 @@ async def add_to_memory(data: Dict[str, Any]):
         logger.error(f"Erro ao adicionar à memória: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat")
-async def chat_rest(payload: ChatMessage):
-    """
-    Endpoint REST para chat (compatível com fetch() do frontend)
-    """
-    user_message = payload.message
-    user_id = payload.user_id
 
-    if not memory:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Memória não inicializada"}
-        )
-
-    try:
-        # Gerar resposta completa (sem streaming)
-        full_response = ""
-
-        async for chunk in respond_stream_generator(
-            user_message=user_message,
-            user_id=user_id,
-            memory=memory,
-            models=MODELS
-        ):
-            full_response += chunk
-
-        return {
-            "message": full_response,
-            "timestamp": datetime.now().isoformat()
-        }
-
-    except Exception as e:
-        logger.error(f"Erro no REST /chat: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
 
 # ============================================
 # WEBSOCKET CHAT
