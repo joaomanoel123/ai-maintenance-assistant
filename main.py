@@ -20,15 +20,38 @@ Deploy: Render.com
 """
 
 import os
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import sys
+import logging
+from datetime import datetime
+from typing import Optional, Dict, Any
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-# Import correto do chat_pipeline dentro de src/
-from src.chat_pipeline import respond_stream_generator
+# ────────────────────────────────────────────────────────────────
+# IMPORT FIX — garante que /src funciona no Render
+# ────────────────────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DIR = os.path.join(BASE_DIR, "src")
 
-app = FastAPI(title="AI Maintenance Assistant")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-# CORS liberado
+# Agora os imports do seu código
+from chat_pipeline import respond_stream_generator
+
+# ────────────────────────────────────────────────────────────────
+# FASTAPI APP
+# ────────────────────────────────────────────────────────────────
+app = FastAPI(
+    title="AI Maintenance Assistant",
+    version="2.0",
+    description="WebSocket AI Assistant + Predictive Models"
+)
+
+# Liberar frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,49 +60,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rota simples
+# ────────────────────────────────────────────────────────────────
+# MODELS (se futuramente você quiser colocar modelos aqui)
+# ────────────────────────────────────────────────────────────────
+class ChatRequest(BaseModel):
+    message: str
+    user_id: str = "anonymous"
+
+# ────────────────────────────────────────────────────────────────
+# ROOT
+# ────────────────────────────────────────────────────────────────
 @app.get("/")
-def home():
-    return {"status": "ok", "message": "API is running!", "version": "1.0"}
+async def home():
+    return {
+        "status": "ok",
+        "message": "AI Maintenance Assistant is running!",
+        "websocket": "/ws-chat",
+        "docs": "/docs"
+    }
 
+# ────────────────────────────────────────────────────────────────
+# DEBUG
+# ────────────────────────────────────────────────────────────────
+@app.get("/debug")
+async def debug():
+    return {
+        "current_dir": BASE_DIR,
+        "src_dir": SRC_DIR,
+        "files_in_root": os.listdir(BASE_DIR),
+        "files_in_src": os.listdir(SRC_DIR) if os.path.exists(SRC_DIR) else [],
+        "python": sys.version,
+    }
 
-# ==========================
-#  WEBSOCKET DO CHAT (frontend usa este!)
-# ==========================
-
+# ────────────────────────────────────────────────────────────────
+# WEBSOCKET CHAT (STREAMING)
+# ────────────────────────────────────────────────────────────────
 @app.websocket("/ws-chat")
-async def websocket_chat(websocket: WebSocket):
-    await websocket.accept()
+async def websocket_chat(ws: WebSocket):
+    await ws.accept()
+    print("🔗 Cliente conectado ao WebSocket")
 
     try:
         while True:
-            data = await websocket.receive_json()
+            data = await ws.receive_json()
             user_message = data.get("message", "")
             user_id = data.get("user_id", "anonymous")
 
-            # streaming
-            async for chunk in respond_stream_generator(
+            print(f"📩 Mensagem recebida: {user_message}")
+
+            # Gerar resposta via streaming
+            async for token in respond_stream_generator(
                 user_message=user_message,
                 user_id=user_id,
-                memory=None,   # sem memória ainda
-                models={}
+                memory=None,      # se quiser adicionar memória futuramente
+                models={}         # se quiser adicionar modelos futuramente
             ):
-                await websocket.send_json({
-                    "type": "token",
-                    "data": chunk
-                })
+                await ws.send_json({"type": "token", "data": token})
 
-            await websocket.send_json({
-                "type": "end",
-                "data": "done"
-            })
+            # Finalização do streaming
+            await ws.send_json({"type": "end", "data": "done"})
 
     except WebSocketDisconnect:
-        print("Cliente desconectado")
+        print("❌ Cliente desconectado")
+    except Exception as e:
+        print(f"⚠️ Erro no WebSocket: {e}")
+        await ws.close()
 
-
-
-# Execução local
+# ────────────────────────────────────────────────────────────────
+# RODAR COM Uvicorn (Render usa automaticamente)
+# ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
@@ -88,5 +137,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=port,
-        reload=True
+        reload=False
     )
