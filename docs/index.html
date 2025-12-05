@@ -1133,11 +1133,11 @@
         };
         
         // Escolher qual URL usar
-        const CURRENT_ENV = "development"; // "production", "development" ou "custom"
+        const CURRENT_ENV = "production"; 
         const API_URL = API_URLS[CURRENT_ENV] || API_URLS.development;
         
         // Modo mock: true = sempre usar dados simulados, false = tentar API primeiro
-        const USE_MOCK_DATA = true; // ⚠️ Mudar para false quando API estiver pronta
+        const USE_MOCK_DATA = false; // ⚠️ Mudar para false quando API estiver pronta
 
         let currentResultId = null;
         let isAPIAvailable = false;
@@ -1490,95 +1490,46 @@
             severityEl.style.color = severityColors[reasoning.severity] || '#00d4ff';
         }
 
-        // ========================================
-        // CHAT COM ESFERA
-        // ========================================
-        function sendSphereMessage() {
-            const input = document.getElementById('sphereChatInput');
-            const message = input.value.trim();
+       // ========================================
+// CHAT - AGORA CONECTADO À API REAL
+// ========================================
+async function sendSphereMessage() {
+    const input = document.getElementById('sphereChatInput');
+    const message = input.value.trim();
+    if (!message) return;
 
-            if (!message) return;
+    addSphereMessage(message, 'user');
+    input.value = '';
 
-            addSphereMessage(message, 'user');
-            input.value = '';
+    const typing = document.getElementById('sphereTypingIndicator');
+    typing.classList.add('active');
 
-            const typingIndicator = document.getElementById('sphereTypingIndicator');
-            typingIndicator.classList.add('active');
+    try {
+        // Chamada ao backend REAL
+        const response = await fetch(`${API_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: message,
+                user_id: "frontend"
+            })
+        });
 
-            setTimeout(() => {
-                typingIndicator.classList.remove('active');
-                const response = generateBotResponse(message);
-                addSphereMessage(response, 'bot');
-            }, 1500);
+        const data = await response.json();
+
+        if (data.response) {
+            addSphereMessage(data.response, 'bot');
+        } else {
+            addSphereMessage("⚠️ A API respondeu, mas sem conteúdo.", "bot");
         }
 
-        function addSphereMessage(text, sender) {
-            const container = document.getElementById('sphereChatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `sphere-chat-message ${sender}`;
-            messageDiv.textContent = text;
+    } catch (err) {
+        console.error("Erro no chat:", err);
+        addSphereMessage("❌ Erro ao conectar com a API.", "bot");
+    }
 
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function clearSphereChat() {
-            const container = document.getElementById('sphereChatMessages');
-            container.innerHTML = `
-                <div class="sphere-chat-message bot">
-                    👋 Chat limpo! Como posso ajudar você agora?
-                </div>
-            `;
-        }
-
-        function toggleVoice() {
-            const messages = document.querySelectorAll('.sphere-chat-message.bot');
-            if (messages.length > 0) {
-                const lastMessage = messages[messages.length - 1].textContent;
-                const utterance = new SpeechSynthesisUtterance(lastMessage);
-                utterance.lang = 'pt-BR';
-                speechSynthesis.speak(utterance);
-            } else {
-                alert('🎤 Nenhuma mensagem para ler!');
-            }
-        }
-
-        function generateBotResponse(message) {
-            const msg = message.toLowerCase();
-
-            if (msg.includes('olá') || msg.includes('oi') || msg.includes('hello')) {
-                return '👋 Olá! Como posso ajudá-lo com análises preditivas hoje?';
-            } else if (msg.includes('ajuda') || msg.includes('help')) {
-                return '📚 Posso ajudar com:\n\n• Executar análises preditivas\n• Explicar resultados\n• Visualizar estatísticas\n• Dúvidas sobre RUL e falhas\n\nO que você gostaria de saber?';
-            } else if (msg.includes('análise') || msg.includes('analysis')) {
-                return '📊 Para executar uma análise:\n\n1. Vá para a página "Análise"\n2. Configure os parâmetros dos sensores\n3. Escolha o tipo (Falhas ou RUL)\n4. Clique em "Executar Análise"\n\nPosso te ajudar com algo mais?';
-            } else if (msg.includes('rul')) {
-                return '🔧 RUL (Remaining Useful Life) é a vida útil restante estimada de um equipamento.\n\nNosso modelo CNN-RNN analisa dados de sensores para prever quantos ciclos operacionais restam antes de uma manutenção ser necessária.';
-            } else if (msg.includes('falha') || msg.includes('failure')) {
-                return '⚠️ Nossa análise de falhas usa Random Forest para prever a probabilidade de um equipamento apresentar falha.\n\nO modelo analisa:\n• Temperatura\n• Rotação (RPM)\n• Torque\n• Desgaste\n\nE retorna a probabilidade de falha com nível de confiança.';
-            } else if (msg.includes('stats') || msg.includes('estatísticas')) {
-                return '📈 Veja a página "Estatísticas" para visualizar:\n\n• Performance do sistema\n• Métricas RLHF\n• Uso de memória\n• Status da API\n\nTodos os dados são atualizados em tempo real!';
-            } else if (msg.includes('como funciona')) {
-                return '🤖 Sistema AGI Generativa:\n\n1. **Predição**: ML/DL para análise\n2. **Raciocínio**: Análise causal\n3. **Decisão**: Recomendações inteligentes\n4. **RLHF**: Aprendizado por feedback\n5. **Memória**: Contexto persistente\n\nUm sistema completo de IA!';
-            } else if (msg.includes('obrigado') || msg.includes('thanks')) {
-                return '😊 Por nada! Estou aqui para ajudar. Qualquer dúvida, é só perguntar!';
-            } else {
-                return `Recebi sua mensagem: "${message}"\n\nPergunte sobre:\n• Como fazer análises\n• O que é RUL\n• Predição de falhas\n• Estatísticas do sistema\n• Como o AGI funciona`;
-            }
-        }
-
-        // ========================================
-        // AUTO REFRESH
-        // ========================================
-        setInterval(() => {
-            checkAPIStatus();
-            const currentPage = document.querySelector('.page.active').id;
-            if (currentPage === 'page-home') {
-                loadHomeStats();
-            } else if (currentPage === 'page-stats') {
-                loadStats();
-            }
-        }, 30000);
+    typing.classList.remove("active");
+}
     </script>
 </body>
 </html>label">Status da API</span>
