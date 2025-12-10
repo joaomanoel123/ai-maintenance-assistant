@@ -1121,416 +1121,135 @@
         </div>
     </div>
 
-    <script>
-        // ========================================
-        // CONFIGURAÇÃO
-        // ========================================
-        // IMPORTANTE: Trocar estas URLs quando sua API estiver pronta
-        const API_URLS = {
-            production: "https://ai-maintenance-assistant-1.onrender.com",
-            development: "http://localhost:8000",
-            custom: "" // Cole sua URL personalizada aqui
-        };
-        
-        // Escolher qual URL usar
-        const CURRENT_ENV = "production"; 
-        const API_URL = API_URLS[CURRENT_ENV] || API_URLS.development;
-        
-        // Modo mock: true = sempre usar dados simulados, false = tentar API primeiro
-        const USE_MOCK_DATA = false; // ⚠️ Mudar para false quando API estiver pronta
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
 
-        let currentResultId = null;
-        let isAPIAvailable = false;
-        let apiCheckAttempts = 0;
-        const MAX_API_CHECK_ATTEMPTS = 3;
+    // ============================
+    // CONFIGURAÇÃO DO BACKEND
+    // ============================
+    const WS_URL = "wss://ai-maintenance-assistant-1.onrender.com/ws-chat";
 
-        // ========================================
-        // LOADING SCREEN
-        // ========================================
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('hidden');
-                initApp();
-            }, 2000);
-        });
+    let socket = null;
+    let isConnected = false;
 
-        // ========================================
-        // NAVIGATION
-        // ========================================
-        function showPage(pageName) {
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
+    // ============================
+    // ELEMENTOS DO CHAT
+    // ============================
+    const messagesBox = document.querySelector(".sphere-chat-messages");
+    const inputBox = document.querySelector(".sphere-chat-input");
+    const typingIndicator = document.querySelector(".sphere-typing-indicator");
 
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            document.getElementById(`page-${pageName}`).classList.add('active');
-            event.target.classList.add('active');
-
-            if (pageName === 'stats') {
-                loadStats();
-            }
-        }
-
-        // ========================================
-        // INIT APP
-        // ========================================
-        async function initApp() {
-            await checkAPIStatus();
-            await loadHomeStats();
-            updateLastUpdate();
-        }
-
-        // ========================================
-        // API STATUS
-        // ========================================
-        async function checkAPIStatus() {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-                const response = await fetch(`${API_URL}/health`, {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                const data = await response.json();
-
-                if (data.status === 'healthy') {
-                    document.getElementById('api-status').textContent = '● Online';
-                    document.getElementById('api-status').style.color = '#10b981';
-                    isAPIAvailable = true;
-                    return true;
-                } else {
-                    throw new Error('Unhealthy');
-                }
-            } catch (error) {
-                console.warn('API não disponível:', error.message);
-                document.getElementById('api-status').textContent = '● Offline';
-                document.getElementById('api-status').style.color = '#ef4444';
-                isAPIAvailable = false;
-                return false;
-            }
-        }
-
-        // ========================================
-        // MOCK DATA (para desenvolvimento)
-        // ========================================
-        const MOCK_DATA = {
-            stats: {
-                predictions: { total: 156 },
-                feedback: { total_received: 89, average_score: 4.3 },
-                memory: { short_term_size: 45, long_term_size: 1203 },
-                system: { models_loaded: 2 }
-            },
-            prediction: {
-                result_id: 'mock_' + Date.now(),
-                prediction: {
-                    type: 'failure',
-                    value: 0.23,
-                    confidence: 0.87
-                },
-                reasoning: {
-                    severity: 'MEDIUM'
-                }
-            }
-        };
-
-        // ========================================
-        // LOAD STATS COM FALLBACK
-        // ========================================
-        async function loadHomeStats() {
-            try {
-                if (USE_MOCK_DATA || !isAPIAvailable) {
-                    // Usar dados mock
-                    const data = MOCK_DATA.stats;
-                    document.getElementById('home-stat-predictions').textContent = 
-                        data.predictions.total;
-                    document.getElementById('home-stat-feedback').textContent = 
-                        data.feedback.total_received;
-                    return;
-                }
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                const response = await fetch(`${API_URL}/stats`, {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                const data = await response.json();
-
-                document.getElementById('home-stat-predictions').textContent = 
-                    data.predictions?.total || '0';
-                document.getElementById('home-stat-feedback').textContent = 
-                    data.feedback?.total_received || '0';
-
-            } catch (error) {
-                console.warn('Usando dados mock:', error.message);
-                // Fallback para mock data
-                const data = MOCK_DATA.stats;
-                document.getElementById('home-stat-predictions').textContent = 
-                    data.predictions.total;
-                document.getElementById('home-stat-feedback').textContent = 
-                    data.feedback.total_received;
-            }
-        }
-
-        async function loadStats() {
-            try {
-                if (USE_MOCK_DATA || !isAPIAvailable) {
-                    // Usar dados mock
-                    const data = MOCK_DATA.stats;
-                    document.getElementById('total-predictions').textContent = 
-                        data.predictions.total;
-                    document.getElementById('total-feedback').textContent = 
-                        data.feedback.total_received;
-                    document.getElementById('avg-score').textContent = 
-                        data.feedback.average_score.toFixed(1);
-                    document.getElementById('short-memory').textContent = 
-                        data.memory.short_term_size;
-                    document.getElementById('long-memory').textContent = 
-                        data.memory.long_term_size;
-                    document.getElementById('models-loaded').textContent = 
-                        data.system.models_loaded;
-                    return;
-                }
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                const response = await fetch(`${API_URL}/stats`, {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                const data = await response.json();
-
-                document.getElementById('total-predictions').textContent = 
-                    data.predictions?.total || '0';
-                document.getElementById('total-feedback').textContent = 
-                    data.feedback?.total_received || '0';
-                document.getElementById('avg-score').textContent = 
-                    data.feedback?.average_score || '-';
-                document.getElementById('short-memory').textContent = 
-                    data.memory?.short_term_size || '0';
-                document.getElementById('long-memory').textContent = 
-                    data.memory?.long_term_size || '0';
-                document.getElementById('models-loaded').textContent = 
-                    data.system?.models_loaded || '-';
-
-            } catch (error) {
-                console.warn('Usando dados mock:', error.message);
-                // Fallback para mock data
-                const data = MOCK_DATA.stats;
-                document.getElementById('total-predictions').textContent = 
-                    data.predictions.total;
-                document.getElementById('total-feedback').textContent = 
-                    data.feedback.total_received;
-                document.getElementById('avg-score').textContent = 
-                    data.feedback.average_score.toFixed(1);
-                document.getElementById('short-memory').textContent = 
-                    data.memory.short_term_size;
-                document.getElementById('long-memory').textContent = 
-                    data.memory.long_term_size;
-                document.getElementById('models-loaded').textContent = 
-                    data.system.models_loaded;
-            }
-        }
-
-        function updateLastUpdate() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            document.getElementById('last-update').textContent = timeStr;
-            document.getElementById('last-analysis').textContent = timeStr;
-        }
-
-        // ========================================
-        // ANALYSIS COM FALLBACK
-        // ========================================
-        async function runAnalysis() {
-            const btn = document.getElementById('analyze-btn');
-            const resultDisplay = document.getElementById('result-display');
-
-            const requestData = {
-                analysis_type: document.getElementById('analysis-type').value,
-                data: {
-                    type: parseInt(document.getElementById('machine-type').value),
-                    air_temperature: parseFloat(document.getElementById('air-temp').value),
-                    process_temperature: parseFloat(document.getElementById('process-temp').value),
-                    rpm: parseFloat(document.getElementById('rpm').value),
-                    torque: parseFloat(document.getElementById('torque').value),
-                    tool_wear: parseFloat(document.getElementById('tool-wear').value)
-                },
-                enable_reasoning: true,
-                enable_decision: true,
-                generate_explanation: true
-            };
-
-            btn.disabled = true;
-            btn.textContent = '⏳ Processando...';
-            resultDisplay.style.display = 'none';
-
-            try {
-                if (USE_MOCK_DATA || !isAPIAvailable) {
-                    // Simular delay da API
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    
-                    // Usar dados mock
-                    const result = MOCK_DATA.prediction;
-                    currentResultId = result.result_id;
-                    
-                    displayAnalysisResult(result);
-                    resultDisplay.style.display = 'block';
-                    
-                    updateLastUpdate();
-                    loadHomeStats();
-                    return;
-                }
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-                const response = await fetch(`${API_URL}/predict`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const result = await response.json();
-                currentResultId = result.result_id;
-
-                displayAnalysisResult(result);
-                resultDisplay.style.display = 'block';
-
-                updateLastUpdate();
-                loadHomeStats();
-
-            } catch (error) {
-                console.warn('Erro na API, usando dados mock:', error.message);
-                
-                // Fallback para mock
-                const result = MOCK_DATA.prediction;
-                currentResultId = result.result_id;
-                
-                displayAnalysisResult(result);
-                resultDisplay.style.display = 'block';
-                
-                // Mostrar notificação
-                showNotification('⚠️ Usando dados simulados (API offline)', 'warning');
-                
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🚀 Executar Análise Completa';
-            }
-        }
-
-        // ========================================
-        // NOTIFICAÇÃO
-        // ========================================
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                padding: 15px 25px;
-                background: ${type === 'warning' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(0, 212, 255, 0.9)'};
-                color: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-                font-size: 14px;
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function displayAnalysisResult(result) {
-            const pred = result.prediction;
-            const reasoning = result.reasoning;
-
-            if (pred.type === 'failure') {
-                document.getElementById('result-prediction').textContent = 
-                    `${(pred.value * 100).toFixed(1)}% de probabilidade de falha`;
-            } else {
-                document.getElementById('result-prediction').textContent = 
-                    `${pred.value.toFixed(0)} ciclos restantes`;
-            }
-
-            document.getElementById('result-confidence').textContent = 
-                `${(pred.confidence * 100).toFixed(0)}%`;
-
-            document.getElementById('result-severity').textContent = 
-                reasoning.severity;
-
-            const severityEl = document.getElementById('result-severity');
-            const severityColors = {
-                'LOW': '#10b981',
-                'MEDIUM': '#f59e0b',
-                'HIGH': '#ef4444',
-                'CRITICAL': '#dc2626'
-            };
-            severityEl.style.color = severityColors[reasoning.severity] || '#00d4ff';
-        }
-
-       // ========================================
-// CHAT - AGORA CONECTADO À API REAL
-// ========================================
-async function sendSphereMessage() {
-    const input = document.getElementById('sphereChatInput');
-    const message = input.value.trim();
-    if (!message) return;
-
-    addSphereMessage(message, 'user');
-    input.value = '';
-
-    const typing = document.getElementById('sphereTypingIndicator');
-    typing.classList.add('active');
-
-    try {
-        // Chamada ao backend REAL
-        const response = await fetch(`${API_URL}/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                message: message,
-                user_id: "frontend"
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.response) {
-            addSphereMessage(data.response, 'bot');
-        } else {
-            addSphereMessage("⚠️ A API respondeu, mas sem conteúdo.", "bot");
-        }
-
-    } catch (err) {
-        console.error("Erro no chat:", err);
-        addSphereMessage("❌ Erro ao conectar com a API.", "bot");
+    const sendBtn = document.querySelector("#sendBtn");
+    if (!sendBtn) {
+        console.error("❌ ERRO: #sendBtn não existe no HTML!");
+        return;
     }
 
-    typing.classList.remove("active");
-}
-    </script>
+    // ============================
+    // ADICIONAR MENSAGENS
+    // ============================
+    function addMessage(text, sender = "bot") {
+        const div = document.createElement("div");
+        div.classList.add("sphere-chat-message", sender);
+        div.textContent = text;
+        messagesBox.appendChild(div);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    // ============================
+    // CONECTAR AO WEBSOCKET
+    // ============================
+    function connectWebSocket() {
+        console.log("🔌 Tentando conectar WebSocket...");
+
+        socket = new WebSocket(WS_URL);
+
+        socket.onopen = () => {
+            console.log("🟢 WebSocket conectado");
+            isConnected = true;
+            document.querySelector(".sphere-status-indicator").textContent = "Online";
+            document.querySelector(".sphere-status-indicator").style.color = "#10b981";
+        };
+
+        socket.onerror = (err) => {
+            console.error("❌ WebSocket erro:", err);
+        };
+
+        socket.onclose = () => {
+            console.warn("🔴 WebSocket desconectado");
+            isConnected = false;
+
+            document.querySelector(".sphere-status-indicator").textContent = "Offline";
+            document.querySelector(".sphere-status-indicator").style.color = "red";
+
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        // RECEBENDO TOKENS
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "token") {
+                addBotStreaming(data.data);
+            }
+
+            if (data.type === "end") {
+                typingIndicator.classList.remove("active");
+            }
+        };
+    }
+
+    connectWebSocket();
+
+    // ============================
+    // STREAMING DO BOT
+    // ============================
+    let botBubble = null;
+
+    function addBotStreaming(text) {
+        if (!botBubble) {
+            botBubble = document.createElement("div");
+            botBubble.classList.add("sphere-chat-message", "bot");
+            messagesBox.appendChild(botBubble);
+        }
+
+        botBubble.textContent += text;
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    // ============================
+    // ENVIAR MENSAGEM
+    // ============================
+    function sendMessage() {
+        if (!isConnected) {
+            addMessage("❌ Servidor offline. Tentando reconectar...", "bot");
+            return;
+        }
+
+        const message = inputBox.value.trim();
+        if (!message) return;
+
+        addMessage(message, "user");
+        inputBox.value = "";
+
+        typingIndicator.classList.add("active");
+        botBubble = null;
+
+        socket.send(JSON.stringify({
+            message: message,
+            user_id: "user123"
+        }));
+    }
+
+    // BOTÃO ENVIAR
+    sendBtn.addEventListener("click", sendMessage);
+
+    // ENTER PARA ENVIAR
+    inputBox.addEventListener("keypress", e => {
+        if (e.key === "Enter") sendMessage();
+    });
+});
+</script>
 </body>
 </html>label">Status da API</span>
                         <span class="stats-num" id="api-status">●</span>
