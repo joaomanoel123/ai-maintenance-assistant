@@ -70,61 +70,67 @@ class ChatRequest(BaseModel):
 # ────────────────────────────────────────────────────────────────
 # ROOT
 # ────────────────────────────────────────────────────────────────
-@app.get("/")
-async def home():
+# =============================================================================
+# ROTAS REQUERIDAS PELO FRONT-END
+# =============================================================================
+
+# ✔ HEALTH CHECK (frontend usa a cada refresh)
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
+# ✔ STATS (usado no dashboard e na home)
+@app.get("/stats")
+async def stats():
     return {
-        "status": "ok",
-        "message": "AI Maintenance Assistant is running!",
-        "websocket": "/ws-chat",
-        "docs": "/docs"
+        "predictions": {"total": 156},
+        "feedback": {"total_received": 89, "average_score": 4.3},
+        "memory": {"short_term_size": 45, "long_term_size": 1203},
+        "system": {"models_loaded": 2}
     }
 
-# ────────────────────────────────────────────────────────────────
-# DEBUG
-# ────────────────────────────────────────────────────────────────
-@app.get("/debug")
-async def debug():
+
+# ✔ PREDICT (usado quando o usuário clica em “Executar Análise”)
+@app.post("/predict")
+async def predict(payload: dict):
+    """
+    IMPORTANTE:
+    Substituir por IA real no futuro.
+    Aqui está só um modelo mock, compatível com o frontend.
+    """
     return {
-        "current_dir": BASE_DIR,
-        "src_dir": SRC_DIR,
-        "files_in_root": os.listdir(BASE_DIR),
-        "files_in_src": os.listdir(SRC_DIR) if os.path.exists(SRC_DIR) else [],
-        "python": sys.version,
+        "result_id": "res_" + str(int(datetime.now().timestamp())),
+        "prediction": {
+            "type": "failure",       # ou "rul"
+            "value": 0.23,           # probabilidade ou ciclos
+            "confidence": 0.87
+        },
+        "reasoning": {
+            "severity": "MEDIUM"
+        }
     }
 
-# ────────────────────────────────────────────────────────────────
-# WEBSOCKET CHAT (STREAMING)
-# ────────────────────────────────────────────────────────────────
-@app.websocket("/ws-chat")
-async def websocket_chat(ws: WebSocket):
-    await ws.accept()
-    print("🔗 Cliente conectado ao WebSocket")
 
-    try:
-        while True:
-            data = await ws.receive_json()
-            user_message = data.get("message", "")
-            user_id = data.get("user_id", "anonymous")
+# ✔ CHAT HTTP (fallback, não streaming)
+@app.post("/chat")
+async def chat_http(payload: dict):
+    user_message = payload.get("message", "")
+    user_id = payload.get("user_id", "anonymous")
 
-            print(f"📩 Mensagem recebida: {user_message}")
+    final_text = ""
 
-            # Gerar resposta via streaming
-            async for token in respond_stream_generator(
-                user_message=user_message,
-                user_id=user_id,
-                memory=None,      # se quiser adicionar memória futuramente
-                models={}         # se quiser adicionar modelos futuramente
-            ):
-                await ws.send_json({"type": "token", "data": token})
+    # usa seu pipeline real (stream → acumula tokens)
+    async for token in respond_stream_generator(
+        user_message=user_message,
+        user_id=user_id,
+        memory=None,
+        models={}
+    ):
+        final_text += token
 
-            # Finalização do streaming
-            await ws.send_json({"type": "end", "data": "done"})
+    return {"response": final_text}
 
-    except WebSocketDisconnect:
-        print("❌ Cliente desconectado")
-    except Exception as e:
-        print(f"⚠️ Erro no WebSocket: {e}")
-        await ws.close()
 
 # ────────────────────────────────────────────────────────────────
 # RODAR COM Uvicorn (Render usa automaticamente)
